@@ -7,7 +7,7 @@ def guionista_agent(state: dict) -> dict:
     research = state.get("research", "")
     feedback = state.get("script_feedback", "")
     
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.7)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
     
     system_instruction = """
     Eres el Guionista de un podcast católico mariano en formato "Cápsula Breve".
