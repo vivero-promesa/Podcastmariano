@@ -2,60 +2,64 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 
 def guionista_agent(state: dict) -> dict:
-    print("✍️ [Guionista] Redactando la Cápsula Mariana...")
-    
+    print("✍️ [Guionista] Diseñando arquitectura del guion (Fórmula Spotify)...")
+
     research = state.get("research", "")
     feedback = state.get("script_feedback", "")
-    
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
-    
+
+    # Mantenemos el modelo estable y subimos un poco la temperatura a 0.7 
+    # para darle más creatividad narrativa en el storytelling.
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
+
     system_instruction = """
-    Eres el Guionista de un podcast católico mariano en formato "Cápsula Breve".
-    Transformas investigación teológica en guiones de audio dinámicos, profundos y directos al corazón.
+    Eres un Productor y Guionista de nivel 'Top 10 Spotify', experto en retención de audiencia.
+    Tu especialidad es escribir sobre el cruce entre bioética, fe, historia e Inteligencia Artificial.
+    Transformas investigaciones profundas en guiones de podcast adictivos, utilizando técnicas de neuro-storytelling.
 
-    REGLAS DEL GUION:
-    1. EXTENSIÓN: Entre 300 y 400 palabras (exactamente 2.5 minutos de locución).
-    2. RITMO: El gancho inicial debe captar la atención en los primeros 3 segundos.
-    3. FIDELIDAD: Basate ÚNICAMENTE en la investigación proporcionada.
-    4. MARCADORES DE AUDIO: Usa [MÚSICA: descripción], [PAUSA CORTA], [ÉNFASIS].
-    5. ESTILO BOCA-A-OÍDO: Frases cortas, como contarle una historia a un amigo.
+    REGLAS DE INGENIERÍA DE GUION:
+    1. ESTILO: Habla como si le estuvieras contando un secreto fascinante a un amigo inteligente. NADA de lenguaje académico aburrido.
+    2. MARCADORES SONOROS: Actúa como director de audio. Inserta directivas precisas en corchetes: [SFX: Latido de corazón], [MÚSICA: Tensión in crescendo], [PAUSA 2s].
+    3. RITMO: Frases cortas, contundentes. Diseñadas para ser leídas en voz alta sin ahogarse.
+    4. TONO: Mantén un balance perfecto entre el misterio, la profundidad filosófica/teológica y el dilema moral contemporáneo.
     """
-    
-    human_instruction = """
-    Crea el guion usando esta investigación aprobada:
 
-    INVESTIGACIÓN BASE:
+    human_instruction = """
+    Utiliza esta investigación validada y el feedback para generar el episodio.
+
+    [INVESTIGACIÓN BASE]:
     {research}
 
     {feedback_section}
 
-    ESTRUCTURA OBLIGATORIA (300-400 palabras):
+    Aplica ESTRICTAMENTE la siguiente "Fórmula de Retención Spotify" en este orden exacto. Subtitula cada sección en el guion final pero de forma invisible para el locutor (ej. --- HOOK ---).
 
-    [MÚSICA: Gancho inspirador]
-    1. EL GANCHO (15 seg): Una pregunta intrigante o dato asombroso.
-    2. LA HISTORIA (1 min): ¿Qué pasó? ¿Dónde? ¿Cuándo? La esencia del evento.
-    [PAUSA CORTA]
-    3. EL NÚCLEO ESPIRITUAL (45 seg): La pepita de oro teológica. ¿Qué nos pide la Virgen?
-    [MÚSICA: Suave y contemplativa]
-    4. DESPEDIDA Y ORACIÓN (30 seg): Cierre + mini-oración ("Madre, enséñanos a...").
+    1. HOOK (30 seg): [MÚSICA: Intrigante]. Lanza un dato perturbador, una paradoja o una pregunta que rompa la mente del oyente en los primeros 5 segundos.
+    2. HISTORIA IMPACTANTE: Aterriza el hook en una historia humana real o un evento documentado en la investigación.
+    3. PREGUNTA CENTRAL: Plantea el dilema ético/teológico de fondo ("¿Hasta dónde podemos llegar...?").
+    4. CONFLICTO: Muestra los dos lados de la moneda (ej. el avance vs. el límite moral/divino).
+    5. EXPLICACIÓN SENCILLA: Traduce la teología o la ciencia compleja a palabras de a pie, usando una metáfora visual.
+    6. EJEMPLOS REALES: Da una aplicación práctica que el oyente viva hoy en su celular o en su vida diaria.
+    7. GIRO INESPERADO: [MÚSICA: Cambio drástico]. Revela algo que la investigación dice que nadie se espera. Un cambio total de perspectiva.
+    8. CONCLUSIÓN EMOCIONAL: Conecta el tema con el corazón humano, la fe y la esperanza.
+    9. PREGUNTA FINAL: Cierra con un interrogante abierto y profundo que deje al oyente pensando todo el día. [SFX: Eco sutil, corte a negro].
     """
-    
-    feedback_section = f"FEEDBACK DE LA DIRECTORA EDITORIAL:\n{feedback}" if feedback else ""
-    
+
+    feedback_section = f"[FEEDBACK DE DIRECCIÓN]:\n{feedback}" if feedback else ""
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_instruction),
         ("human", human_instruction)
     ])
-    
+
     response = (prompt | llm).invoke({
         "research": research,
         "feedback_section": feedback_section
     })
-    
+
     revision_count = state.get("revision_count", 0)
-    
-    print("✅ [Guionista] Guion generado. Listo para revisión editorial.")
-    
+
+    print("✅ [Guionista] Guion generado con estructura de alta retención.")
+
     return {
         **state,
         "script": response.content,
