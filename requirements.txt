@@ -13,7 +13,8 @@ streamlit>=1.35.0
 # Validación de datos
 pydantic>=2.0.0
 
-# Audio (ElevenLabs)
+# Audio (Librería Gratuita)
+edge-tts>=6.1.12
 requests>=2.31.0
 
 # Variables de entorno
