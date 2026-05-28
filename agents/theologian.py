@@ -20,7 +20,7 @@ def teologo_agent(state: dict) -> dict:
     print("⛪ [Teólogo] Iniciando revisión doctrinal...")
 
     # SE CORRIGE EL NOMBRE DEL MODELO CON '-latest'
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0)
+   llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
     structured_llm = llm.with_structured_output(QualityChecklist)
 
     # ✅ FIX 2: Lee 'research' (no 'script') porque corre antes del guionista
