@@ -8,7 +8,7 @@ def investigador_agent(state: dict) -> dict:
     topic = state["topic"]
 
     # MODELO ESTABLE DE PRODUCCIÓN PARA EVITAR ERRORES DE RUTA DE API
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
 
     system_instruction = """
     Actúas como un Investigador Histórico y Archivero de la Santa Sede.
