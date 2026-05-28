@@ -1,16 +1,14 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 
-
 def guionista_agent(state: dict) -> dict:
     print("✍️ [Guionista] Redactando la Cápsula Mariana...")
-
+    
     research = state.get("research", "")
-    feedback = state.get("script_feedback", "")  # Si hubo rechazo previo, toma el feedback
-
-    # SE CORRIGE EL NOMBRE DEL MODELO CON '-latest'
-   llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
-
+    feedback = state.get("script_feedback", "")
+    
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.7)
+    
     system_instruction = """
     Eres el Guionista de un podcast católico mariano en formato "Cápsula Breve".
     Transformas investigación teológica en guiones de audio dinámicos, profundos y directos al corazón.
@@ -22,7 +20,7 @@ def guionista_agent(state: dict) -> dict:
     4. MARCADORES DE AUDIO: Usa [MÚSICA: descripción], [PAUSA CORTA], [ÉNFASIS].
     5. ESTILO BOCA-A-OÍDO: Frases cortas, como contarle una historia a un amigo.
     """
-
+    
     human_instruction = """
     Crea el guion usando esta investigación aprobada:
 
@@ -41,24 +39,23 @@ def guionista_agent(state: dict) -> dict:
     [MÚSICA: Suave y contemplativa]
     4. DESPEDIDA Y ORACIÓN (30 seg): Cierre + mini-oración ("Madre, enséñanos a...").
     """
-
+    
     feedback_section = f"FEEDBACK DE LA DIRECTORA EDITORIAL:\n{feedback}" if feedback else ""
-
+    
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_instruction),
         ("human", human_instruction)
     ])
-
+    
     response = (prompt | llm).invoke({
         "research": research,
         "feedback_section": feedback_section
     })
-
+    
     revision_count = state.get("revision_count", 0)
-
+    
     print("✅ [Guionista] Guion generado. Listo para revisión editorial.")
-
-    # ✅ FIX 3: Return explícito del estado actualizado
+    
     return {
         **state,
         "script": response.content,
