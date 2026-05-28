@@ -7,7 +7,8 @@ def investigador_agent(state: dict) -> dict:
 
     topic = state["topic"]
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+    # SE CORRIGE EL NOMBRE DEL MODELO AGREGANDO EL SUFIJO '-latest'
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.3)
 
     system_instruction = """
     Actúas como un Investigador Histórico y Archivero de la Santa Sede.
@@ -48,6 +49,7 @@ def investigador_agent(state: dict) -> dict:
     response = (prompt | llm).invoke({"topic": topic})
 
     print("✅ [Investigador] Investigación completada.")
+    
     return {
         **state,
         "research": response.content,
