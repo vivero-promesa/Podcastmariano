@@ -8,7 +8,7 @@ def investigador_agent(state: dict) -> dict:
     topic = state["topic"]
 
     # SE CORRIGE EL NOMBRE DEL MODELO AGREGANDO EL SUFIJO '-latest'
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.3)
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
 
     system_instruction = """
     Actúas como un Investigador Histórico y Archivero de la Santa Sede.
