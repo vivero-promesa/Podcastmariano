@@ -12,7 +12,7 @@ class QualityChecklist(BaseModel):
 def teologo_agent(state: dict) -> dict:
     print("⛪ [Teólogo] Iniciando revisión doctrinal...")
     
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
     structured_llm = llm.with_structured_output(QualityChecklist)
     
     investigacion = state.get("research", "No hay investigación disponible.")
