@@ -1,50 +1,30 @@
 import os
-import requests
-import streamlit as st
+import asyncio
+import edge_tts
+
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
-    print("🎙️ Iniciando módulo de audio...")
+    print("🎙️ Iniciando generación de audio gratuita con Edge-TTS...")
     
-    # 1. MODO SEGURO STREAMLIT: Buscar la llave nativamente en los Secretos de la nube
-    try:
-        api_key = st.secrets["ELEVENLABS_API_KEY"]
-    except Exception:
-        # Fallback por si alguna vez vuelves a correrlo en tu computadora
-        api_key = os.getenv("ELEVENLABS_API_KEY")
-        
-    voice_id = "EXAVITQu4vr4xnSDxMaL"  # El ID de tu narrador
-
-    if not api_key:
-        return {"error": "No se encontró ELEVENLABS_API_KEY en los secretos."}
-
-    print("🎙️ Conectando con los servidores de ElevenLabs...")
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    # SELECCIÓN DE VOZ NEURONAL EN ESPAÑOL
+    # "es-ES-AlvaroNeural" tiene un tono narrativo excelente, pausado y profundo para podcasts.
+    # Si prefieres una voz de México, puedes probar "es-MX-JorgeNeural".
+    VOICE = "es-ES-AlvaroNeural" 
     
-    headers = {
-        "Accept": "audio/mpeg", 
-        "Content-Type": "application/json", 
-        "xi-api-key": api_key
-    }
+    # Ruta absoluta segura dentro del servidor temporal de Streamlit Cloud
+    ruta_absoluta = os.path.abspath(nombre_archivo)
     
-    data = {
-        "text": texto_guion,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
-    }
+    # Función asíncrona requerida por la librería edge-tts
+    async def construir_audio():
+        communicate = edge_tts.Communicate(texto_guion, VOICE)
+        await communicate.save(ruta_absoluta)
 
     try:
-        response = requests.post(url, json=data, headers=headers)
+        # Ejecuta de forma segura el proceso asíncrono dentro del flujo de Streamlit
+        asyncio.run(construir_audio())
+        print(f"✅ Audio generado con éxito en: {ruta_absoluta}")
+        return {"success": True, "ruta": ruta_absoluta}
         
-        if response.status_code == 200:
-            # 2. RUTAS SEGURAS: Forzamos una ruta absoluta temporal sin subcarpetas conflictivas
-            ruta_absoluta = os.path.abspath(nombre_archivo)
-            
-            with open(ruta_absoluta, 'wb') as f:
-                f.write(response.content)
-                
-            return {"success": True, "ruta": ruta_absoluta}
-        else:
-            return {"error": f"Error de ElevenLabs ({response.status_code}): {response.text}"}
-            
     except Exception as e:
-        return {"error": f"Error interno al guardar: {str(e)}"}
+        print(f"❌ Error al procesar audio: {str(e)}")
+        return {"success": False, "error": f"Error con Edge-TTS: {str(e)}"}
