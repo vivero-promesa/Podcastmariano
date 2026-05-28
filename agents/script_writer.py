@@ -9,7 +9,7 @@ def guionista_agent(state: dict) -> dict:
     feedback = state.get("script_feedback", "")  # Si hubo rechazo previo, toma el feedback
 
     # SE CORRIGE EL NOMBRE DEL MODELO CON '-latest'
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.7)
+   llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
 
     system_instruction = """
     Eres el Guionista de un podcast católico mariano en formato "Cápsula Breve".
