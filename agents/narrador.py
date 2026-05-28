@@ -4,19 +4,21 @@ import edge_tts
 
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
-    print("🎙️ Iniciando generación de audio gratuita con Edge-TTS...")
+    print("🎙️ Iniciando generación de audio gratuita con Edge-TTS (Acento Local)...")
     
-    # SELECCIÓN DE VOZ NEURONAL EN ESPAÑOL
-    # "es-ES-AlvaroNeural" tiene un tono narrativo excelente, pausado y profundo para podcasts.
-    # Si prefieres una voz de México, puedes probar "es-MX-JorgeNeural".
-    VOICE = "es-ES-AlvaroNeural" 
+    # Seleccionamos la voz nativa de Colombia (Acento sutil, fluido y familiar)
+    VOICE = "es-CO-XimenaNeural" 
+    
+    # Bajamos la velocidad un 8% para darle un tono más pausado, reflexivo y orante
+    RATE = "-8%"
     
     # Ruta absoluta segura dentro del servidor temporal de Streamlit Cloud
     ruta_absoluta = os.path.abspath(nombre_archivo)
     
     # Función asíncrona requerida por la librería edge-tts
     async def construir_audio():
-        communicate = edge_tts.Communicate(texto_guion, VOICE)
+        # Pasamos el parámetro 'rate' para controlar la velocidad de la locución
+        communicate = edge_tts.Communicate(texto_guion, VOICE, rate=RATE)
         await communicate.save(ruta_absoluta)
 
     try:
