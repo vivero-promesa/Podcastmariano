@@ -7,7 +7,7 @@ def investigador_agent(state: dict) -> dict:
 
     topic = state["topic"]
 
-    # SE CORRIGE EL NOMBRE DEL MODELO AGREGANDO EL SUFIJO '-latest'
+    # MODELO ESTABLE DE PRODUCCIÓN PARA EVITAR ERRORES DE RUTA DE API
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-001", temperature=0.3)
 
     system_instruction = """
