@@ -11,7 +11,7 @@ class QualityChecklist(BaseModel):
     observaciones: List[str] = Field(description="Sugerencias de ajuste.")
 
 
-# ✅ FIX 1: Nombre corregido a 'teologo_agent' (consistente con podcast_flow.py)
+# ✅ FIX 1: Nombre consistente con podcast_flow.py
 def teologo_agent(state: dict) -> dict:
     """
     Audita la INVESTIGACIÓN (no el guion) frente al Magisterio.
@@ -19,7 +19,8 @@ def teologo_agent(state: dict) -> dict:
     """
     print("⛪ [Teólogo] Iniciando revisión doctrinal...")
 
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    # SE CORRIGE EL NOMBRE DEL MODELO CON '-latest'
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0)
     structured_llm = llm.with_structured_output(QualityChecklist)
 
     # ✅ FIX 2: Lee 'research' (no 'script') porque corre antes del guionista
@@ -40,6 +41,7 @@ def teologo_agent(state: dict) -> dict:
     resultado = structured_llm.invoke(prompt)
 
     print(f"✅ [Teólogo] Veredicto: {resultado.veredicto} | Rigor: {resultado.nivel_rigor}/10")
+    
     return {
         **state,
         "theology_review": resultado,
