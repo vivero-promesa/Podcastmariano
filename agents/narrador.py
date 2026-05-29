@@ -72,7 +72,7 @@ def subir_a_drive(ruta_local, nombre_archivo):
         
     except Exception as e:
         print(f"❌ Error crítico en subida: {e}")
-        return False
+        return str(e) # <--- Cambiamos False por el error real en texto
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
     print("🎙️ Limpiando guion...")
@@ -90,15 +90,18 @@ def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
         communicate = edge_tts.Communicate(texto_limpio, VOICE)
         await communicate.save(ruta_absolute)
 
-    try:
+   try:
         asyncio.run(construir_audio())
         
-        subida_exitosa = subir_a_drive(ruta_absolute, nombre_archivo)
+        # Guardamos el resultado real de la subida
+        resultado_subida = subir_a_drive(ruta_absolute, nombre_archivo)
         
-        if not subida_exitosa:
-            return {"success": False, "error": "Falló el guardado. El bot autónomo no pudo escribir en su espacio. Revisa logs."}
+        # SI FALLA, RETORNAMOS EL ERROR REAL QUE CAPTURÓ EL SCRIPT
+        if resultado_subida is not True:
+            # resultado_subida contiene el texto del error si falló en el except
+            return {"success": False, "error": f"Falló el guardado en Drive. Detalle técnico: {resultado_subida}"}
         
         return {"success": True, "ruta": ruta_absolute, "drive_backup": True}
         
     except Exception as e:
-        return {"success": False, "error": f"Error: {str(e)}"}
+        return {"success": False, "error": f"Error general: {str(e)}"}
