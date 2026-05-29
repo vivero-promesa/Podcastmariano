@@ -1,87 +1,41 @@
 import os
 import asyncio
 import re
+import traceback
 import edge_tts
 import streamlit as st
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-def obtener_o_crear_carpeta(service):
-    # El bot busca si ya creó su propia carpeta antes
-    nombre_carpeta = "Audios Podcast Bot"
-    query = f"name = '{nombre_carpeta}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-    
-    resultados = service.files().list(q=query, fields="files(id)").execute()
-    archivos = resultados.get('files', [])
-    
-    if archivos:
-        return archivos[0]['id']
-    
-    # Si no existe, el bot la crea en su propia raíz libre de bloqueos
-    meta_carpeta = {
-        'name': nombre_carpeta,
-        'mimeType': 'application/vnd.google-apps.folder'
-    }
-    carpeta = service.files().create(body=meta_carpeta, fields='id').execute()
-    id_nueva_carpeta = carpeta.get('id')
-    
-    # IMPORTANTE: El bot te comparte LA CARPETA COMPLETA a tu correo personal automáticamente
-    # REEMPLAZA EL CORREO DE ABAJO CON TU CORREO PERSONAL DE GOOGLE
-    tu_correo_personal = "bot-podcast@gen-lang-client-0464943288.iam.gserviceaccount.com"
-    
-    permiso = {
-        'type': 'user',
-        'role': 'writer',
-        'emailAddress': tu_correo_personal
-    }
-    service.permissions().create(fileId=id_nueva_carpeta, body=permiso).execute()
-    print(f"📁 Carpeta nueva creada y compartida con {tu_correo_personal}")
-    
-    return id_nueva_carpeta
-
-def subir_a_drive(ruta_local, nombre_archivo):
-    print("☁️ Iniciando subida a Google Drive de forma independiente...")
+def subir_a_drive_raiz(ruta_local, nombre_archivo):
+    print("☁️ Intentando subida forzada a la raíz del bot...")
     try:
         credenciales_info = st.secrets["gcp_service_account"]
         credentials = Credentials.from_service_account_info(
             credenciales_info,
             scopes=['https://www.googleapis.com/auth/drive']
         )
-        
         service = build('drive', 'v3', credentials=credentials)
         
-        # Obtenemos el ID de la carpeta autónoma del bot
-        folder_id = obtener_o_crear_carpeta(service)
-        
-        file_metadata = {
-            'name': nombre_archivo,
-            'parents': [folder_id]
-        }
-        
+        # Subimos directamente a la raíz del bot, sin carpetas externas
+        file_metadata = {'name': f"PRUEBA_DEBUG_{nombre_archivo}"}
         media = MediaFileUpload(ruta_local, mimetype='audio/mpeg', resumable=True)
         
-        file = service.files().create(
-            body=file_metadata, 
-            media_body=media, 
-            fields='id'
-        ).execute()
-        
-        print(f"✅ Archivo respaldado con éxito. ID: {file.get('id')}")
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return True
         
     except Exception as e:
-        print(f"❌ Error crítico en subida: {e}")
-        return str(e) # <--- Cambiamos False por el error real en texto
+        # Extraemos la traza completa y cruda del error
+        return traceback.format_exc()
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
-    print("🎙️ Limpiando guion...")
     texto_limpio = re.sub(r'\[.*?\]', '', texto_guion)
     texto_limpio = texto_limpio.replace('*', '')
     texto_limpio = re.sub(r'(?i)\bnarrador\b[:,]?\s*', '', texto_limpio).strip()
     
     if not texto_limpio:
-        return {"success": False, "error": "El texto quedó vacío tras la limpieza."}
+        return {"success": False, "error": "Texto vacío tras limpieza."}
 
     VOICE = "es-CO-SalomeNeural" 
     ruta_absolute = os.path.abspath(nombre_archivo)
@@ -90,17 +44,16 @@ def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
         communicate = edge_tts.Communicate(texto_limpio, VOICE)
         await communicate.save(ruta_absolute)
 
-   try:
+    try:
         asyncio.run(construir_audio())
         
-        # Guardamos el resultado real de la subida
-        resultado_subida = subir_a_drive(ruta_absolute, nombre_archivo)
+        # Ejecutamos la subida forzada
+        resultado_subida = subir_a_drive_raiz(ruta_absolute, nombre_archivo)
         
-        # SI FALLA, RETORNAMOS EL ERROR REAL QUE CAPTURÓ EL SCRIPT
         if resultado_subida is not True:
-            # resultado_subida contiene el texto del error si falló en el except
-            return {"success": False, "error": f"Falló el guardado en Drive. Detalle técnico: {resultado_subida}"}
-        
+            # Si no devuelve True, devuelve el log crudo. Lo imprimimos en pantalla.
+            return {"success": False, "error": f"💥 DIAGNÓSTICO CRUDO DE GOOGLE:\n\n{resultado_subida}"}
+            
         return {"success": True, "ruta": ruta_absolute, "drive_backup": True}
         
     except Exception as e:
