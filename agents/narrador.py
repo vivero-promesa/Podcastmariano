@@ -6,7 +6,12 @@ import edge_tts
 import streamlit as st
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
-    texto_limpio = re.sub(r'\[.*?\]', '', texto_guion)
+    # 1. Filtros nuevos: Eliminar frases no deseadas
+    texto_limpio = texto_guion.replace('--- PREGUNTA CENTRAL ---', '')
+    texto_limpio = texto_limpio.replace('--- CONFLICTO ---', '')
+    
+    # 2. Filtros anteriores: Limpiar corchetes, asteriscos y la palabra "Narrador:"
+    texto_limpio = re.sub(r'\[.*?\]', '', texto_limpio)
     texto_limpio = texto_limpio.replace('*', '')
     texto_limpio = re.sub(r'(?i)\bnarrador\b[:,]?\s*', '', texto_limpio).strip()
     
@@ -17,7 +22,9 @@ def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
     ruta_absolute = os.path.abspath(nombre_archivo)
     
     async def construir_audio():
-        communicate = edge_tts.Communicate(texto_limpio, VOICE)
+        # Fijamos la velocidad normal (+0%). 
+        # Si la sientes lenta, puedes poner "+10%", si la sientes rápida "-10%"
+        communicate = edge_tts.Communicate(texto_limpio, VOICE, rate="+0%")
         await communicate.save(ruta_absolute)
 
     try:
