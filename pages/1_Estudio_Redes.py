@@ -17,7 +17,6 @@ st.divider()
 # --- MÓDULO 1: KIT DE LANZAMIENTO ---
 st.header("📦 Módulo 1: Kit de Lanzamiento (Spotify / YouTube)")
 
-# Entrada del usuario
 tema_podcast = st.text_area("¿De qué trata el episodio que acabas de grabar?", height=100, 
                             placeholder="Ej: La importancia del rezo del Santo Rosario en familia y sus promesas...")
 
@@ -25,10 +24,9 @@ if st.button("Generar Kit de Episodio"):
     if tema_podcast:
         with st.spinner("Generando propuestas fieles al Magisterio..."):
             try:
-                # Usamos el modelo rápido y económico
-                model = genai.GenerativeModel('gemini-1.5-flash') 
+                # AQUÍ ESTÁ EL CAMBIO 1
+                model = genai.GenerativeModel('gemini-pro') 
                 
-                # EL BLINDAJE CATÓLICO (System Prompt)
                 prompt = f"""
                 Actúa como un experto en Teología Católica fiel al Magisterio de la Iglesia y como un especialista en marketing digital católico.
                 
@@ -46,8 +44,6 @@ if st.button("Generar Kit de Episodio"):
                 """
                 
                 respuesta = model.generate_content(prompt)
-                
-                # Guardamos la respuesta en la "memoria" temporal para no perderla al editar
                 st.session_state['kit_generado'] = respuesta.text
                 
             except Exception as e:
@@ -55,14 +51,12 @@ if st.button("Generar Kit de Episodio"):
     else:
         st.warning("Por favor, escribe un pequeño resumen del tema primero para que la IA tenga contexto.")
 
-# 3. Interfaz de Edición Manual (Cero Gasto de Tokens)
 if 'kit_generado' in st.session_state:
     st.subheader("📝 Edita y Aprueba tu Kit")
     st.markdown("Borra, corrige o ajusta las opciones aquí mismo. **Lo que escribas en esta caja no consume tokens.**")
-    
-    # La caja de texto editable
     texto_final = st.text_area("Resultado Final:", value=st.session_state['kit_generado'], height=350)
-    st.divider()
+
+st.divider()
 
 # --- MÓDULO 2: VIDEOS CORTOS (TIKTOK / REELS) ---
 st.header("🎬 Módulo 2: Adaptación a Video Corto (TikTok / Reels)")
@@ -74,9 +68,9 @@ if st.button("Extraer Guion de 60 Segundos"):
     if guion_original:
         with st.spinner("Adaptando el guion con fidelidad doctrinal..."):
             try:
+                # AQUÍ ESTÁ EL CAMBIO 2
                 model = genai.GenerativeModel('gemini-pro')
                 
-                # EL BLINDAJE CATÓLICO PARA VIDEO
                 prompt_video = f"""
                 Actúa como un experto en Teología Católica y un creador de contenido digital formativo.
                 
@@ -105,9 +99,7 @@ if st.button("Extraer Guion de 60 Segundos"):
     else:
         st.warning("Por favor, pega el guion de tu podcast primero.")
 
-# Interfaz de Edición Manual
 if 'guion_corto_generado' in st.session_state:
     st.subheader("📝 Edita tu Guion Corto")
     st.markdown("Ajusta las palabras para que suene natural al hablar. **Edición sin costo de tokens.**")
-    
     texto_video_final = st.text_area("Guion Final para Video:", value=st.session_state['guion_corto_generado'], height=250, key="edit_guion_video")
