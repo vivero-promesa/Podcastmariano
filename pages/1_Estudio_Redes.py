@@ -80,3 +80,23 @@ if 'guion_tiktok' in st.session_state:
                     st.download_button("⬇️ Descargar MP3 para TikTok", f, file_name=nombre_archivo)
             else:
                 st.error(f"Error en la voz: {resultado['error']}")
+st.divider()
+
+# --- MÓDULO 3: INSTAGRAM (CARRUSEL) ---
+st.header("🎨 Módulo 3: Carrusel para Instagram")
+st.markdown("Crea contenido educativo visual dividido en 5 diapositivas.")
+
+guion_carrusel = st.text_area("Pega aquí el tema para el carrusel:", height=100, key="input_carrusel")
+
+if st.button("Diseñar Carrusel"):
+    if guion_carrusel:
+        with st.spinner("Diseñando las diapositivas con rigor teológico..."):
+            model = buscar_mejor_modelo()
+            prompt_c = f"Actúa como experto en pedagogía católica. Crea un carrusel de 5 imágenes para Instagram sobre: {guion_carrusel}. Estructura: 1 Título gancho, 3 diapositivas de contenido doctrinal profundo pero sencillo, y 1 diapositiva de llamado a la acción. Escribe el texto para cada una de las 5 imágenes."
+            res_c = model.generate_content(prompt_c)
+            st.session_state['carrusel_texto'] = res_c.text
+
+if 'carrusel_texto' in st.session_state:
+    st.subheader("📝 Edita tus Diapositivas")
+    texto_carrusel_final = st.text_area("Textos finales:", value=st.session_state['carrusel_texto'], height=300)
+    st.info("💡 Tip: Copia estos textos y úsalos en Canva o tu herramienta de diseño preferida para crear las 5 imágenes.")
