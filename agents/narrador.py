@@ -4,34 +4,6 @@ import re
 import traceback
 import edge_tts
 import streamlit as st
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
-def subir_a_drive(ruta_local, nombre_archivo):
-    print("☁️ Intentando subida a la carpeta compartida...")
-    try:
-        credenciales_info = st.secrets["gcp_service_account"]
-        credentials = Credentials.from_service_account_info(
-            credenciales_info,
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
-        service = build('drive', 'v3', credentials=credentials)
-        
-        # AQUÍ VA EL ID DE TU CARPETA DE GOOGLE DRIVE
-        ID_CARPETA = "173b7x_rPUHL7CSpw9pcMJSlKnlqPJDb-"
-        
-        file_metadata = {
-            'name': nombre_archivo,
-            'parents': [ID_CARPETA]
-        }
-        media = MediaFileUpload(ruta_local, mimetype='audio/mpeg', resumable=True)
-        
-        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        return True
-        
-    except Exception as e:
-        return traceback.format_exc()
 
 def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
     texto_limpio = re.sub(r'\[.*?\]', '', texto_guion)
@@ -49,13 +21,11 @@ def generar_audio(texto_guion, nombre_archivo="capsula_audio.mp3"):
         await communicate.save(ruta_absolute)
 
     try:
+        # Generamos el audio directamente en el servidor
         asyncio.run(construir_audio())
-        resultado_subida = subir_a_drive(ruta_absolute, nombre_archivo)
         
-        if resultado_subida is not True:
-            return {"success": False, "error": f"💥 DIAGNÓSTICO CRUDO DE GOOGLE:\n\n{resultado_subida}"}
-            
-        return {"success": True, "ruta": ruta_absolute, "drive_backup": True}
+        # Devolvemos la ruta local para que Streamlit lo reproduzca
+        return {"success": True, "ruta": ruta_absolute, "drive_backup": False}
         
     except Exception as e:
-        return {"success": False, "error": f"Error general: {str(e)}"}
+        return {"success": False, "error": f"Error al generar voz: {str(e)}"}
