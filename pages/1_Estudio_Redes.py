@@ -77,7 +77,7 @@ if 'guion_tiktok' in st.session_state:
                 st.success("✅ ¡Audio generado con éxito!")
                 st.audio(resultado["ruta"])
                 with open(resultado["ruta"], "rb") as f:
-                    st.download_button("⬇️ Descargar MP3 para TikTok", f, file_name=nombre_archivo)
+                    st.download_button("⬇️ Descargar MP3 para TikTok", f, file_name="tiktok_catolico.mp3")
             else:
                 st.error(f"Error en la voz: {resultado['error']}")
 st.divider()
