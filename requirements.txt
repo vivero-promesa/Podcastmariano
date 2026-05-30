@@ -23,3 +23,5 @@ google-auth>=2.0.0
 
 # Variables de entorno
 python-dotenv>=1.0.0
+
+google-generativeai
