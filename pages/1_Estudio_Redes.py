@@ -62,3 +62,52 @@ if 'kit_generado' in st.session_state:
     
     # La caja de texto editable
     texto_final = st.text_area("Resultado Final:", value=st.session_state['kit_generado'], height=350)
+    st.divider()
+
+# --- MÓDULO 2: VIDEOS CORTOS (TIKTOK / REELS) ---
+st.header("🎬 Módulo 2: Adaptación a Video Corto (TikTok / Reels)")
+st.markdown("Transforma tu guion principal en una cápsula de 60 segundos, lista para ser narrada y publicada.")
+
+guion_original = st.text_area("Pega aquí el guion completo de tu podcast:", height=150, key="input_guion_video")
+
+if st.button("Extraer Guion de 60 Segundos"):
+    if guion_original:
+        with st.spinner("Adaptando el guion con fidelidad doctrinal..."):
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                # EL BLINDAJE CATÓLICO PARA VIDEO
+                prompt_video = f"""
+                Actúa como un experto en Teología Católica y un creador de contenido digital formativo.
+                
+                Tarea: Resume el siguiente guion de podcast para crear un guion de video vertical (TikTok/Reels) de máximo 60 segundos (aproximadamente 130-150 palabras).
+                
+                Estructura obligatoria:
+                1. GANCHO: Una frase inicial (primeros 3 segundos) que atrape la atención sin caer en sensacionalismo.
+                2. DESARROLLO: El núcleo del mensaje teológico, claro y directo.
+                3. LLAMADO A LA ACCIÓN (CTA): Una breve invitación final a escuchar el episodio completo del podcast.
+                
+                REGLAS ESTRICTAS:
+                - Fidelidad absoluta al Magisterio de la Iglesia Católica.
+                - Cero terminología protestante o de nueva era.
+                - Tono reverente, formativo y dinámico.
+                - Escribe SOLO el texto que el narrador va a leer (sin acotaciones visuales, corchetes, ni títulos), para que pueda ser procesado limpiamente por el motor de voz.
+                
+                Guion original:
+                {guion_original}
+                """
+                
+                respuesta_video = model.generate_content(prompt_video)
+                st.session_state['guion_corto_generado'] = respuesta_video.text
+                
+            except Exception as e:
+                st.error(f"Error al conectar con Gemini: {str(e)}")
+    else:
+        st.warning("Por favor, pega el guion de tu podcast primero.")
+
+# Interfaz de Edición Manual
+if 'guion_corto_generado' in st.session_state:
+    st.subheader("📝 Edita tu Guion Corto")
+    st.markdown("Ajusta las palabras para que suene natural al hablar. **Edición sin costo de tokens.**")
+    
+    texto_video_final = st.text_area("Guion Final para Video:", value=st.session_state['guion_corto_generado'], height=250, key="edit_guion_video")
