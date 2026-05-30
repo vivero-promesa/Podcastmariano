@@ -74,7 +74,7 @@ if st.button("Extraer Guion de 60 Segundos"):
     if guion_original:
         with st.spinner("Adaptando el guion con fidelidad doctrinal..."):
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-pro')
                 
                 # EL BLINDAJE CATÓLICO PARA VIDEO
                 prompt_video = f"""
