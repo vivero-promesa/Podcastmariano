@@ -28,18 +28,26 @@ st.session_state.setdefault("analisis", None)
 st.session_state.setdefault("producidos", {})
 
 tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
-    ["🎬 Clips del episodio", "🔤 Títulos para el buscador", "🎨 Carrusel para Canva", "🗣️ Cápsula con voz IA"]
+    ["🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
 )
 
 # ─────────────────────────── Clips del episodio ───────────────────────────
 with tab_clips:
-    st.subheader("Del episodio grabado a 5 videos verticales")
+    st.subheader("Del episodio grabado a 3 videos verticales")
     c1, c2 = st.columns([2, 1])
     with c1:
         audio_subido = st.file_uploader("Audio del episodio", type=["mp3", "m4a", "wav", "aac", "ogg"])
         contexto = st.text_input("¿De qué trata el episodio? (opcional)", placeholder="Ej.: Humanae Vitae, anticoncepción")
+        enlace_ep = st.text_input(
+            "Enlace del episodio en Spotify (opcional)",
+            placeholder="https://open.spotify.com/episode/…",
+            help="Si lo pegas, los textos de cada clip usan el enlace de este episodio y no el del programa.",
+        )
     with c2:
-        cantidad = st.slider("Número de clips", 3, 7, 5)
+        cantidad = st.slider(
+            "Número de clips", 1, 7, config.CLIPS_POR_SEMANA,
+            help="Modelo vigente: 3 clips por semana, el mismo archivo en Instagram y TikTok.",
+        )
         fondo_subido = st.file_uploader("Imagen de fondo (opcional)", type=["jpg", "jpeg", "png"])
         con_subtitulos = st.checkbox("Subtítulos automáticos", value=True)
 
@@ -59,7 +67,7 @@ with tab_clips:
             video.normalizar_audio(original, episodio)
             minutos = video.duracion_segundos(episodio) / 60
             st.write(f"⬆️ Enviando {minutos:.0f} minutos de audio a Gemini…")
-            st.write("🔎 Escuchando el episodio completo y eligiendo los mejores momentos (1-3 minutos)…")
+            st.write("🔎 Escuchando el episodio completo y eligiendo los mejores momentos (30-90 segundos)…")
             st.session_state.analisis = analizar_episodio(episodio, cantidad, contexto)
             estado.update(label=f"{len(st.session_state.analisis.clips)} momentos encontrados", state="complete", expanded=False)
         st.session_state.trabajo = {"carpeta": carpeta, "episodio": episodio, "fondo": fondo}
@@ -111,10 +119,14 @@ with tab_clips:
                         with open(hecho["mp4"], "rb") as f:
                             st.download_button("⬇️ Video MP4", f.read(), file_name=f"clip_{i + 1}.mp4", key=f"dl_{i}")
                     with v2:
-                        textos = textos_clip(clip)
+                        textos = textos_clip(clip, enlace_ep)
                         st.text_area("Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
                         st.text_area("TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
-                        st.caption(f"Recuerda: enlace del episodio en la bio → {textos['enlace']}")
+                        st.caption(
+                            f"Recuerda: enlace del episodio en la bio → {textos['enlace']}. "
+                            "En Instagram, si tu cuenta tiene la opción, compártelo como Reel de prueba (Trial Reel) "
+                            "para que lo vea primero gente que aún no te sigue."
+                        )
 
         listos = {i: d for i, d in st.session_state.producidos.items() if d and not d.get("error")}
         if listos:
@@ -124,7 +136,7 @@ with tab_clips:
                     z.write(d["mp4"], f"clip_{i + 1}.mp4")
                     if d.get("srt"):
                         z.write(d["srt"], f"clip_{i + 1}.srt")
-                    t = textos_clip(analisis.clips[i])
+                    t = textos_clip(analisis.clips[i], enlace_ep)
                     z.writestr(f"clip_{i + 1}_textos.txt", f"INSTAGRAM\n{t['instagram']}\n\nTIKTOK\n{t['tiktok']}\n")
                 z.writestr("capitulos_spotify.txt", "\n".join(analisis.capitulos))
             st.download_button("⬇️ Descargar todos los clips (.zip)", buffer.getvalue(), file_name="clips.zip", mime="application/zip")
@@ -142,6 +154,7 @@ with tab_titulos:
 
 # ─────────────────────────── Carrusel ───────────────────────────
 with tab_carrusel:
+    st.info("En pausa en el modelo vigente: no se publica carrusel cada semana. Úsalo solo si tú lo decides.")
     st.subheader("Carrusel de Instagram para Canva")
     tema_carrusel = st.text_input("Tema del carrusel", placeholder="Ej.: 5 cosas que dice la Iglesia sobre la FIV")
     n_diap = st.slider("Diapositivas", 5, 10, 7)
@@ -157,6 +170,7 @@ with tab_carrusel:
 
 # ─────────────────────────── Cápsula con voz IA ───────────────────────────
 with tab_capsula:
+    st.info("En pausa en el modelo vigente: el episodio se graba con tu voz. Úsalo solo si tú lo decides.")
     st.subheader("Cápsula de 60 segundos sin grabar")
     st.caption("Convierte un guion o una idea en un video vertical con voz IA y subtítulos.")
     base = st.text_area("Guion o idea", height=150)
