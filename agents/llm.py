@@ -1,9 +1,15 @@
-"""Conexión única con Gemini usando el SDK oficial google-genai."""
+"""Conexión única con Gemini usando el SDK oficial google-genai.
+
+Si Google responde "modelo saturado" (503), "demasiadas peticiones" (429) u otro
+error temporal del servidor, la app reintenta sola con esperas crecientes y, si el
+modelo principal sigue caído, prueba con el modelo de respaldo (GEMINI_MODEL_RESPALDO,
+por defecto gemini-flash-latest).
+"""
 import time
 from typing import Optional, Type, TypeVar
 
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from pydantic import BaseModel
 
 import config
@@ -12,9 +18,18 @@ T = TypeVar("T", bound=BaseModel)
 
 _cliente: Optional[genai.Client] = None
 
+# Errores temporales de Google que vale la pena reintentar.
+_CODIGOS_TEMPORALES = {429, 500, 502, 503, 504}
+# Esperas entre intentos (segundos) con el mismo modelo.
+_ESPERAS = (4, 10, 20)
+
 
 class FaltaClave(RuntimeError):
     pass
+
+
+class GeminiOcupado(RuntimeError):
+    """Google sigue saturado después de todos los reintentos."""
 
 
 def cliente() -> genai.Client:
@@ -27,6 +42,42 @@ def cliente() -> genai.Client:
             )
         _cliente = genai.Client(api_key=clave)
     return _cliente
+
+
+def _modelos() -> list:
+    """Modelo principal y, si es distinto, el de respaldo."""
+    principal = config.MODELO
+    respaldo = getattr(config, "MODELO_RESPALDO", "") or ""
+    return [principal] + ([respaldo] if respaldo and respaldo != principal else [])
+
+
+def _es_temporal(e: Exception) -> bool:
+    codigo = getattr(e, "code", None)
+    if isinstance(e, errors.ServerError):
+        return True
+    return isinstance(e, errors.APIError) and codigo in _CODIGOS_TEMPORALES
+
+
+def _generar(contenidos: list, cfg: types.GenerateContentConfig):
+    """generate_content con reintentos y modelo de respaldo ante errores temporales."""
+    ultimo_error: Optional[Exception] = None
+    for modelo in _modelos():
+        for intento in range(len(_ESPERAS) + 1):
+            try:
+                return cliente().models.generate_content(model=modelo, contents=contenidos, config=cfg)
+            except errors.APIError as e:
+                if not _es_temporal(e):
+                    # Modelo de respaldo inexistente o sin acceso: no ocultar el error original.
+                    if modelo != config.MODELO and ultimo_error is not None:
+                        break
+                    raise
+                ultimo_error = e
+                if intento < len(_ESPERAS):
+                    time.sleep(_ESPERAS[intento])
+    raise GeminiOcupado(
+        "Gemini está saturado en este momento (error temporal de Google). "
+        "Espera unos minutos y vuelve a intentarlo; lo que ya hiciste en la app no se pierde."
+    ) from ultimo_error
 
 
 def texto(
@@ -42,7 +93,7 @@ def texto(
         system_instruction=sistema, temperature=temperatura, tools=herramientas
     )
     contenidos = [*(extra or []), prompt]
-    r = cliente().models.generate_content(model=config.MODELO, contents=contenidos, config=cfg)
+    r = _generar(contenidos, cfg)
     return (r.text or "").strip()
 
 
@@ -61,7 +112,7 @@ def estructurado(
         response_schema=esquema,
     )
     contenidos = [*(extra or []), prompt]
-    r = cliente().models.generate_content(model=config.MODELO, contents=contenidos, config=cfg)
+    r = _generar(contenidos, cfg)
     if isinstance(r.parsed, esquema):
         return r.parsed
     return esquema.model_validate_json(r.text)
