@@ -1,4 +1,5 @@
-"""Censor Doctrinal: revisa la investigación Y el guion final contra el texto oficial."""
+"""Censor Doctrinal: revisa la investigación Y el guion final contra el texto oficial
+(uno o varios documentos combinados)."""
 import re
 from typing import List
 
@@ -13,16 +14,19 @@ class RevisionDoctrinal(BaseModel):
     veredicto: str = Field(description="Exactamente uno de: APROBADO, CORREGIR, RECHAZADO")
     nivel_rigor: int = Field(description="Rigor doctrinal e histórico del 1 al 10")
     citas_verificadas: List[str] = Field(description="Citas que coinciden con el texto oficial")
-    citas_dudosas: List[str] = Field(description="Citas que no aparecen o están alteradas en el texto oficial")
+    citas_dudosas: List[str] = Field(description="Citas que no aparecen, están alteradas o se atribuyen al documento equivocado")
     afirmaciones_a_corregir: List[str] = Field(description="Frases doctrinalmente imprecisas, con la corrección propuesta")
     tono_pastoral: str = Field(description="Evaluación del tono: ¿acoge a quien sufre infertilidad sin juzgar?")
     observaciones: List[str] = Field(description="Sugerencias concretas de mejora")
 
 
 SISTEMA = """
-Eres el Censor Doctrinal del podcast católico «La maternidad no siempre tiene cuna».
+Eres el Censor Doctrinal del podcast católico «La maternidad no siempre tiene cuna; a veces tiene cruz».
 Auditas textos frente al Magisterio de la Iglesia católica y, cuando se te entrega, frente al TEXTO OFICIAL del documento.
 Sé exigente con las citas: si una cita textual no aparece en el texto oficial, va en citas_dudosas.
+Si el texto oficial trae VARIOS documentos (separados por === DOCUMENTO ===), verifica cada cita contra el documento
+que dice citar: una cita atribuida al documento equivocado también va en citas_dudosas, indicando a cuál pertenece.
+Si se afirma que la enseñanza cambió o evolucionó entre documentos, comprueba que los textos lo respalden.
 Criterio de veredicto:
 - APROBADO: sin errores doctrinales y sin citas dudosas.
 - CORREGIR: errores menores, citas dudosas o tono mejorable.
