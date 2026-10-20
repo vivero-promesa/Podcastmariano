@@ -1,58 +1,73 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
+"""Agente Investigador: arma el informe del episodio a partir del documento oficial."""
+from typing import Optional
+
+import config
+from agents import llm
+from agents.fuentes import texto_oficial
+
+SISTEMA = f"""
+Eres la investigadora del podcast católico «{config.PODCAST['nombre']}».
+Audiencia: {config.PODCAST['audiencia']}. Muchas oyentes viven infertilidad, pérdidas o tratamientos:
+habla con verdad y con ternura, nunca con condena.
+
+REGLAS:
+1. Fidelidad al Magisterio de la Iglesia católica.
+2. Cuando recibas el TEXTO OFICIAL del documento, toda cita textual debe copiarse EXACTA de ese texto,
+   con su número o párrafo (ej.: «...» (Donum Vitae, II, B, 5)). Si algo no está en el texto, no lo cites.
+3. Separa hechos documentados de opiniones. Marca con [VERIFICAR] cualquier dato que no venga del texto oficial.
+4. Escribe en español claro, sin latín innecesario.
+"""
+
+ESTRUCTURA = """
+Estructura el informe en Markdown, con estas secciones:
+
+## 1. El documento en 3 frases
+(Qué es, quién lo escribió, cuándo y por qué.)
+
+## 2. Cinco enseñanzas clave
+(Para cada una: explicación sencilla + cita textual exacta con su número.)
+
+## 3. Lo que la gente realmente pregunta
+(5 preguntas tal como se escriben en Google o TikTok — por ejemplo «¿la FIV es pecado?» — y qué responde el documento.)
+
+## 4. Historias humanas y datos
+(Casos reales o datos científicos que ayuden a aterrizar el tema. Marca con [VERIFICAR] lo que no salga del documento.)
+
+## 5. Lo que casi nadie sabe
+(Un dato o matiz sorprendente del documento que sirva de giro en el episodio.)
+
+## 6. Esperanza para quien escucha
+(Mensaje pastoral para parejas con infertilidad o heridas, apoyado en el documento.)
+"""
 
 
-def investigador_agent(state: dict) -> dict:
-    print("📚 [Investigador] Iniciando investigación en los Archivos...")
+def investigar(tema: str, documento: Optional[dict] = None, indicaciones: str = "") -> dict:
+    url = (documento or {}).get("url", "")
+    fuente = ""
+    error_fuente = ""
+    if url:
+        try:
+            fuente = texto_oficial(url)
+        except Exception as e:  # sin internet o vatican.va caído: seguimos con búsqueda web
+            error_fuente = str(e)
 
-    topic = state["topic"]
+    titulo_doc = config.etiqueta_documento(documento) if documento else "Tema libre"
+    pedido = f"TEMA DEL EPISODIO: {tema}\nDOCUMENTO BASE: {titulo_doc}\n"
+    if indicaciones:
+        pedido += f"\nINDICACIONES DE LA DIRECTORA:\n{indicaciones}\n"
+    pedido += ESTRUCTURA
 
-    # MODELO ESTABLE DE PRODUCCIÓN PARA EVITAR ERRORES DE RUTA DE API
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
+    if fuente:
+        pedido = f"TEXTO OFICIAL DEL DOCUMENTO (fuente: {url}):\n<<<\n{fuente}\n>>>\n\n" + pedido
+        informe = llm.texto(pedido, sistema=SISTEMA, temperatura=0.3)
+    else:
+        pedido += "\nNo tienes el texto oficial: usa la búsqueda web y marca con [VERIFICAR] toda cita."
+        informe = llm.texto(pedido, sistema=SISTEMA, temperatura=0.3, buscar_web=True)
 
-    system_instruction = """
-    Actúas como un Investigador Histórico y Archivero de la Santa Sede.
-    Tu misión es recopilar información exacta, documentada y fiel al Magisterio para un podcast católico.
-
-    REGLAS DE INVESTIGACIÓN:
-    1. FUENTES APROBADAS: Si el tema trata sobre apariciones o revelaciones privadas, confirma si cuentan
-       con la aprobación oficial de la Iglesia (Constat de supernaturalitate) o del obispo local.
-    2. RIGOR HISTÓRICO: Diferencia entre "hechos históricos documentados" y "tradiciones piadosas".
-    3. CITAS VERIFICABLES: Toda cita bíblica, papal o de santos debe ser real. Indica el documento de origen.
-    """
-
-    human_instruction = """
-    Investiga a profundidad el siguiente tema mariano:
-
-    TEMA: {topic}
-
-    Estructura tu reporte así:
-
-    ## 1. CONTEXTO HISTÓRICO Y ECLESIAL
-    (Época, situación del mundo/Iglesia, y estatus de aprobación oficial si aplica).
-
-    ## 2. HECHOS Y ACONTECIMIENTOS PRINCIPALES
-    (Narra lo que ocurrió cronológicamente de forma objetiva).
-
-    ## 3. CITAS TEXTUALES Y DOCUMENTOS
-    (2 o 3 frases exactas de Santos, Papas o la Biblia, indicando autor y documento fuente).
-
-    ## 4. NÚCLEO ESPIRITUAL
-    (¿Cuál es el mensaje central para la vida de un católico hoy?).
-    """
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_instruction),
-        ("human", human_instruction)
-    ])
-
-    response = (prompt | llm).invoke({"topic": topic})
-
-    print("✅ [Investigador] Investigación completada.")
-    
     return {
-        **state,
-        "research": response.content,
-        "current_phase": "teologia",
-        "revision_count": state.get("revision_count", 0)
+        "informe": informe,
+        "fuente_url": url,
+        "fuente_texto": fuente,
+        "con_fuente_oficial": bool(fuente),
+        "error_fuente": error_fuente,
     }
