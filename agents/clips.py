@@ -12,11 +12,11 @@ from agents.publicacion import hashtags_instagram_finales, hashtags_tiktok_final
 
 class ClipPropuesto(BaseModel):
     inicio: str = Field(description="Inicio en el audio, formato MM:SS o HH:MM:SS")
-    fin: str = Field(description="Fin en el audio, formato MM:SS o HH:MM:SS. Duración entre 30 y 60 segundos")
+    fin: str = Field(description="Fin en el audio, formato MM:SS o HH:MM:SS. Duración entre 30 y 90 segundos")
     gancho: str = Field(description="Texto en pantalla de máximo 8 palabras que detenga el scroll")
     por_que_funciona: str = Field(description="Por qué este momento puede volverse viral")
-    texto_instagram: str = Field(description="Caption para Instagram de 2 a 4 líneas, sin hashtags")
-    texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags")
+    texto_instagram: str = Field(description="Caption para Instagram de 2 a 4 líneas, sin hashtags. Empieza con el momento o con una pregunta real que la gente se hace (nunca «nuevo episodio») y termina con una pregunta que invite a comentar")
+    texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags. Empieza con una pregunta que la gente busca")
     hashtags_instagram: List[str] = Field(description="7 hashtags temáticos con #")
     hashtags_tiktok: List[str] = Field(description="3 hashtags temáticos con #")
 
@@ -57,7 +57,7 @@ def analizar_episodio(ruta_mp3: str, cantidad: int = 5, contexto: str = "") -> A
 Escucha completo este episodio de «{config.PODCAST['nombre']}».
 {('Contexto: ' + contexto) if contexto else ''}
 
-1. Elige los {cantidad} mejores momentos para clips verticales de 30 a 60 segundos.
+1. Elige los {cantidad} mejores momentos para clips verticales de 30 a 90 segundos.
    Criterios virales: frase que detiene el scroll en los primeros 3 segundos, se entiende sin contexto,
    genera emoción o debate, responde una pregunta que la gente busca ({", ".join(config.PALABRAS_BUSQUEDA[:6])}).
    El clip debe empezar al inicio de una frase y terminar al final de una idea.
