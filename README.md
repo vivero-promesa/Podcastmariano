@@ -9,25 +9,27 @@ Sistema de producción del podcast católico **«La maternidad no siempre tiene 
 
 ## Regla de oro
 
-Cada tarea se hace en un solo lugar. Los títulos, la descripción, los hashtags, los clips y sus textos salen de esta app; no se rehacen en otra herramienta.
+Cada tarea se hace en un solo lugar. Los enfoques, la investigación, el guion, los títulos, la descripción, los hashtags, los clips y sus textos salen de esta app; no se rehacen en otra herramienta.
 
 ## Flujo semanal
 
-1. Documento de la Iglesia (texto oficial de vatican.va)
-2. **Investigadora** (Gemini): cita solo lo que está en el documento
-3. **Censor Doctrinal**: verifica las citas contra el texto oficial
-4. ✅ Primera aprobación de la Directora
-5. **Guionista**: episodio de 15-20 min con 5 momentos [CLIP]
-6. **Censor Doctrinal** del guion
-7. ✅ Segunda aprobación de la Directora
-8. **Paquete de publicación**: títulos para el buscador, descripción, hashtags y portada
-9. Grabas con tu voz
-10. **Estudio de Redes**: clips 9:16 con gancho, subtítulos, «Episodio completo en Spotify» y sus textos para Instagram y TikTok
-11. Publicas en Spotify el viernes y programas 3 clips
+1. Eliges **uno, dos o tres documentos** de la Iglesia (texto oficial de vatican.va). Combinarlos sirve para mostrar cómo evolucionó la enseñanza, por ejemplo Donum Vitae + Dignitas Personae.
+2. **Enfoques nuevos**: la app propone al menos 3 preguntas para el episodio, evitando lo que ya se trató según el historial.
+3. **Investigadora** (Gemini): cita solo lo que está en los documentos e indica de cuál sale cada cita
+4. **Censor Doctrinal**: verifica cada cita contra el texto oficial del documento que dice citar
+5. ✅ Primera aprobación de la Directora
+6. **Guionista**: episodio de 15-20 min con 5 momentos [CLIP]
+7. **Censor Doctrinal** del guion
+8. ✅ Segunda aprobación de la Directora
+9. **Paquete de publicación**: títulos para el buscador, descripción, hashtags y portada
+10. **Historial**: guardas el episodio con su enfoque y los puntos que profundizó
+11. Grabas con tu voz
+12. **Estudio de Redes**: clips 9:16 con gancho, subtítulos, «Episodio completo en Spotify» y sus textos para Instagram y TikTok
+13. Publicas en Spotify el viernes y programas 3 clips
 
 | Día | Qué haces | Dónde |
 | --- | --- | --- |
-| Lunes | Investigación, guion y las dos aprobaciones | Estudio de producción |
+| Lunes | Documento(s), enfoque, investigación, guion, las dos aprobaciones y guardar en el historial | Estudio de producción |
 | Martes | Grabar con tu voz | Tu micrófono |
 | Miércoles | Clips y capítulos; eliges los 3 mejores | Estudio de Redes |
 | Jueves | Portada y programar los 3 clips (unos 45 min) | Instagram y TikTok Studio |
@@ -44,11 +46,21 @@ Cada tarea se hace en un solo lugar. Los títulos, la descripción, los hashtags
 
 ## Páginas
 
-- **Estudio de producción** (`paginas/produccion.py`): documento → investigación → censor → guion → censor → paquete (.zip).
+- **Estudio de producción** (`paginas/produccion.py`):
+  - 🆕 **Buscar documentos nuevos**: revisa en vatican.va las encíclicas, exhortaciones, cartas apostólicas y motu proprio de León XIV y los documentos del Dicasterio para la Doctrina de la Fe desde 2020. Muestra solo los que tratan la vida, la familia o la bioética y no están en el catálogo, y los agrega con un clic.
+  - Documento(s) → enfoques → investigación → censor → guion → censor → paquete (.zip) → historial.
+  - 📖 **Historial de episodios**: todos los episodios con sus documentos y los puntos profundizados.
 - **Estudio de Redes** (`paginas/redes.py`):
   - 🎬 **Clips del episodio**: subes el audio, la IA elige los mejores momentos (30-90 s) y arma videos con subtítulos y sus textos. Opcional: pega el enlace del episodio para que los textos lo usen. También da los capítulos para Spotify.
   - 🔤 **Títulos para el buscador**: reescribe los títulos de episodios ya publicados.
   - ⏸️ **Carrusel** y ⏸️ **Cápsula con voz IA**: en pausa.
+
+## Historial y catálogo (`historial_episodios.json`)
+
+El historial de episodios y los documentos agregados desde la app viven en `historial_episodios.json`, en este mismo repositorio. Así no se pierden cuando Streamlit Cloud reinicia la app, y cada guardado queda como un commit.
+
+- Los documentos fijos están en `config.py`; los que agregas con «Buscar documentos nuevos» quedan en `documentos_extra`.
+- Para que la app guarde sola, agrega `GITHUB_TOKEN` en los Secrets (ver **Claves**). Sin token, la app te deja descargar el archivo actualizado para subirlo a mano.
 
 ## Instalación
 
@@ -59,12 +71,22 @@ Cada tarea se hace en un solo lugar. Los títulos, la descripción, los hashtags
 3. En **Settings → Secrets** agrega:
 
 ```toml
-GOOGLE_API_KEY = "tu-clave"
+GOOGLE_API_KEY = "tu-clave-de-gemini"
+GITHUB_TOKEN = "tu-token-de-github"
 ```
 
 No agregues `GEMINI_MODEL` salvo que quieras otro modelo: por defecto se usa `gemini-3.8-flash`.
 
 `packages.txt` instala ffmpeg automáticamente.
+
+### Cómo crear el GITHUB_TOKEN
+
+1. Entra a GitHub con la cuenta dueña del repositorio (**vivero-promesa**).
+2. Ve a **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+3. Nombre: `Podcastmariano historial`. Resource owner: **vivero-promesa**. Expiración: 1 año.
+4. **Repository access → Only select repositories →** `Podcastmariano`.
+5. **Permissions → Repository permissions → Contents → Read and write**. Nada más.
+6. Copia el token y pégalo en los Secrets de Streamlit como `GITHUB_TOKEN`. No lo pegues en chats ni documentos.
 
 ### Opción B — Codespaces o tu computador
 
@@ -73,7 +95,7 @@ git clone https://github.com/vivero-promesa/Podcastmariano.git
 cd Podcastmariano
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # y pon tu GOOGLE_API_KEY
+cp .env.example .env   # y pon tu GOOGLE_API_KEY (y GITHUB_TOKEN si quieres guardar el historial)
 streamlit run streamlit_app.py
 ```
 
@@ -89,9 +111,11 @@ python main.py
 
 | Variable | Para qué | Dónde se saca |
 | --- | --- | --- |
-| `GOOGLE_API_KEY` | Gemini (investigación, censor, guion, clips) | https://aistudio.google.com/app/apikey |
+| `GOOGLE_API_KEY` | Gemini (enfoques, investigación, censor, guion, clips) | https://aistudio.google.com/app/apikey |
+| `GITHUB_TOKEN` | Guardar el historial y los documentos nuevos en este repositorio | GitHub → Fine-grained token con Contents: Read and write (ver arriba) |
 | `GEMINI_MODEL` | Opcional, por defecto `gemini-3.8-flash` | — |
 | `VOZ_IA` | Opcional, por defecto `es-CO-SalomeNeural` | — |
+| `GITHUB_REPO` / `GITHUB_BRANCH` | Opcionales, por defecto `vivero-promesa/Podcastmariano` y `main` | — |
 
 ## Qué sigue siendo manual (a propósito)
 
@@ -108,11 +132,15 @@ python main.py
 | `paginas/produccion.py` | Estudio de producción |
 | `paginas/redes.py` | Estudio de Redes |
 | `paginas/comun.py` | Barra lateral, revisión del Censor y aprobaciones |
-| `config.py` | Identidad del programa, enlaces, documentos, modelo y clips por semana |
+| `config.py` | Identidad del programa, enlaces, documentos fijos, modelo y clips por semana |
+| `historial_episodios.json` | Historial de episodios y documentos agregados al catálogo |
 | `agents/llm.py` | Conexión con Gemini (SDK google-genai, salidas estructuradas) |
 | `agents/fuentes.py` | Descarga del texto oficial desde vatican.va |
-| `agents/investigator.py` | Investigadora |
-| `agents/theologian.py` | Censor doctrinal (investigación y guion) |
+| `agents/historial.py` | Leer y guardar el historial en GitHub |
+| `agents/enfoques.py` | Enfoques nuevos para el episodio y puntos profundizados |
+| `agents/novedades.py` | Búsqueda de documentos nuevos del Papa y de la Santa Sede |
+| `agents/investigator.py` | Investigadora (uno o varios documentos) |
+| `agents/theologian.py` | Censor doctrinal (investigación y guion, cita por cita y documento por documento) |
 | `agents/script_writer.py` | Guionista |
 | `agents/publicacion.py` | Títulos, descripción, hashtags |
 | `agents/clips.py` | Selección de momentos, subtítulos y textos de cada clip |
