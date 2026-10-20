@@ -31,13 +31,15 @@ def api_key() -> str:
 
 
 # Modelo de Gemini. Se puede cambiar sin tocar código con la variable GEMINI_MODEL.
-MODELO = _secreto("GEMINI_MODEL", "gemini-2.5-flash")
+# gemini-3.8-flash es el Flash estable desde septiembre de 2026; Google limitó el acceso
+# a los modelos 2.5 a quienes ya los usaban, así que una clave nueva podría fallar con 2.5.
+MODELO = _secreto("GEMINI_MODEL", "gemini-3.8-flash")
 
 # ─────────────────────────────────────────────────────────────
 # Identidad del programa
 # ─────────────────────────────────────────────────────────────
 PODCAST = {
-    "nombre": "La maternidad no siempre tiene cuna, a veces es una cruz",
+    "nombre": "La maternidad no siempre tiene cuna; a veces tiene cruz",
     "nombre_corto": "La maternidad no siempre tiene cuna",
     "descripcion": (
         "Bioética, fertilidad y dignidad humana desde la doctrina católica. "
@@ -52,6 +54,10 @@ PODCAST = {
     "audiencia": "adultos católicos de 30 a 50 años, sobre todo en México y Colombia",
     "llamado_spotify": "Escucha el episodio completo en Spotify (enlace en la bio)",
 }
+
+# Modelo de publicación vigente (oct 2026): 3 clips por semana, el mismo archivo en
+# Instagram (prioridad) y TikTok. Sin Facebook. Carrusel y cápsula con voz IA en pausa.
+CLIPS_POR_SEMANA = 3
 
 # Voz gratuita para borradores y cápsulas cortas (edge-tts).
 VOZ_IA = _secreto("VOZ_IA", "es-CO-SalomeNeural")
