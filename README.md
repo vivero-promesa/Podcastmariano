@@ -28,13 +28,13 @@ Documento de la Iglesia (texto oficial de vatican.va)
 | Lunes | Investigación + guion | Página principal |
 | Martes | Grabar con tu voz | Tu micrófono |
 | Miércoles | Subir a Spotify for Creators y programar para el viernes | Spotify for Creators |
-| Jueves | Clips, carrusel y textos | Estudio Redes |
+| Jueves | Clips, carrusel y textos | Estudio de Redes |
 | Viernes | Publicar en Spotify, Instagram y TikTok | Apps |
 
 ## Páginas
 
-1. **Estudio de producción** (`streamlit_app.py`): documento → investigación → censor → guion → censor → paquete (.zip).
-2. **Estudio Redes** (`pages/1_Estudio_Redes.py`):
+1. **Estudio de producción** (`paginas/produccion.py`): documento → investigación → censor → guion → censor → paquete (.zip).
+2. **Estudio de Redes** (`paginas/redes.py`):
    - 🎬 Clips del episodio: sube el audio, la IA elige los mejores momentos y arma videos con subtítulos. También da los capítulos para Spotify.
    - 🔤 Títulos para el buscador: reescribe los títulos de los episodios ya publicados.
    - 🎨 Carrusel para Canva: CSV para Bulk Create + caption.
@@ -44,11 +44,13 @@ Documento de la Iglesia (texto oficial de vatican.va)
 
 ### Opción A — Streamlit Community Cloud (recomendada)
 1. En https://share.streamlit.io crea la app desde este repositorio, archivo `streamlit_app.py`.
-2. En **Settings → Secrets** agrega:
+2. En **Advanced settings** elige **Python 3.12** (con 3.14 algunas librerías, como pyarrow, aún fallan).
+   Streamlit Cloud solo deja elegir la versión al crear la app: si ya existe con otra versión, bórrala y vuelve a crearla.
+3. En **Settings → Secrets** agrega:
    ```toml
    GOOGLE_API_KEY = "tu-clave"
    ```
-3. `packages.txt` instala ffmpeg automáticamente.
+4. `packages.txt` instala ffmpeg automáticamente.
 
 ### Opción B — Codespaces o tu computador
 ```bash
@@ -84,6 +86,10 @@ python main.py
 ## Estructura
 
 ```
+streamlit_app.py          menú de páginas y barra lateral común
+paginas/produccion.py     Estudio de producción
+paginas/redes.py          Estudio de Redes
+paginas/comun.py          barra lateral, revisión del Censor y aprobaciones
 config.py                 identidad del programa, enlaces, documentos y modelo
 agents/llm.py             conexión con Gemini (SDK google-genai, salidas estructuradas)
 agents/fuentes.py         descarga del texto oficial desde vatican.va

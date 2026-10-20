@@ -2,30 +2,24 @@
 carruseles para Canva y cápsulas con voz IA."""
 import io
 import os
-import sys
 import tempfile
 import zipfile
 
 import pandas as pd
 import streamlit as st
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import config
+from agents import llm, video
+from agents.carrusel import crear_carrusel
+from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_clip
+from agents.narrador import generar_audio
+from agents.publicacion import hashtags_instagram_finales, mejorar_titulos
+from paginas.comun import exigir_clave
 
-import config  # noqa: E402
-from agents import llm, video  # noqa: E402
-from agents.carrusel import crear_carrusel  # noqa: E402
-from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_clip  # noqa: E402
-from agents.narrador import generar_audio  # noqa: E402
-from agents.publicacion import hashtags_instagram_finales, mejorar_titulos  # noqa: E402
-
-st.set_page_config(page_title="Estudio de Redes", page_icon="📱", layout="wide")
 st.title("📱 Estudio de Redes")
 st.caption("Cada clip lleva a Spotify: gancho en pantalla, subtítulos y «Episodio completo en Spotify».")
 
-P = config.PODCAST
-if not config.api_key():
-    st.error("Falta la clave GOOGLE_API_KEY. Agrégala en los Secrets de Streamlit o en el archivo .env.")
-    st.stop()
+exigir_clave()
 if not video.ffmpeg_disponible():
     st.warning("ffmpeg no está instalado: los videos no se pueden crear. Revisa que exista packages.txt con «ffmpeg».")
 
@@ -55,15 +49,19 @@ with tab_clips:
         with open(original, "wb") as f:
             f.write(audio_subido.getbuffer())
         episodio = os.path.join(carpeta, "episodio.mp3")
-        with st.spinner("Preparando el audio…"):
-            video.normalizar_audio(original, episodio)
         fondo = None
         if fondo_subido:
             fondo = os.path.join(carpeta, "fondo" + os.path.splitext(fondo_subido.name)[1].lower())
             with open(fondo, "wb") as f:
                 f.write(fondo_subido.getbuffer())
-        with st.spinner("Escuchando el episodio completo y eligiendo momentos (1-3 minutos)…"):
+        with st.status("Analizando el episodio…", expanded=True) as estado:
+            st.write("🎧 Preparando el audio…")
+            video.normalizar_audio(original, episodio)
+            minutos = video.duracion_segundos(episodio) / 60
+            st.write(f"⬆️ Enviando {minutos:.0f} minutos de audio a Gemini…")
+            st.write("🔎 Escuchando el episodio completo y eligiendo los mejores momentos (1-3 minutos)…")
             st.session_state.analisis = analizar_episodio(episodio, cantidad, contexto)
+            estado.update(label=f"{len(st.session_state.analisis.clips)} momentos encontrados", state="complete", expanded=False)
         st.session_state.trabajo = {"carpeta": carpeta, "episodio": episodio, "fondo": fondo}
         st.session_state.producidos = {}
 
@@ -74,8 +72,9 @@ with tab_clips:
         st.code("\n".join(analisis.capitulos), language=None)
 
         if st.button("⚙️ Crear todos los videos"):
-            barra = st.progress(0.0)
+            barra = st.progress(0.0, text="Preparando…")
             for i, clip in enumerate(analisis.clips):
+                barra.progress(i / len(analisis.clips), text=f"Clip {i + 1} de {len(analisis.clips)}: cortando, subtitulando y armando el video…")
                 try:
                     st.session_state.producidos[i] = producir_clip(
                         trabajo["episodio"], a_segundos(clip.inicio), a_segundos(clip.fin), clip.gancho,
@@ -83,7 +82,7 @@ with tab_clips:
                     )
                 except Exception as e:
                     st.session_state.producidos[i] = {"error": str(e)}
-                barra.progress((i + 1) / len(analisis.clips))
+            barra.progress(1.0, text="Videos listos")
 
         for i, clip in enumerate(analisis.clips):
             with st.expander(f"Clip {i + 1} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
@@ -163,24 +162,28 @@ with tab_capsula:
     base = st.text_area("Guion o idea", height=150)
     gancho_capsula = st.text_input("Gancho en pantalla", placeholder="¿La FIV es pecado?")
     if st.button("🗣️ Crear cápsula", disabled=not base.strip()):
-        with st.spinner("Escribiendo, locutando y armando el video…"):
+        with st.status("Creando la cápsula…", expanded=True) as estado:
+            st.write("✍️ Escribiendo el guion de 60 segundos…")
             guion60 = llm.texto(
                 "Resume en un guion hablado de 60 segundos (máximo 150 palabras): gancho en la primera frase, "
                 "una idea central fiel a la doctrina católica dicha con ternura, y cierre «Escucha el episodio "
                 f"completo en Spotify, enlace en la bio». Solo el texto que se lee.\n\n{base}",
                 temperatura=0.6,
             )
+            st.write("🗣️ Locutando con voz IA…")
             carpeta = tempfile.mkdtemp(prefix="capsula_")
             voz = generar_audio(guion60, os.path.join(carpeta, "voz.mp3"))
             if not voz["success"]:
                 st.error(voz["error"])
             else:
+                st.write("🎞️ Subtitulando y armando el video…")
                 try:
                     hecho = producir_clip(
                         voz["ruta"], 0, video.duracion_segundos(voz["ruta"]),
                         gancho_capsula or "Lo que nadie te contó", carpeta, "capsula",
                     )
                     st.session_state.capsula = {"guion": guion60, **hecho}
+                    estado.update(label="Cápsula lista", state="complete", expanded=False)
                 except Exception as e:
                     st.error(str(e))
     cap = st.session_state.get("capsula")

@@ -41,7 +41,13 @@ Estructura el informe en Markdown, con estas secciones:
 """
 
 
-def investigar(tema: str, documento: Optional[dict] = None, indicaciones: str = "") -> dict:
+def investigar(
+    tema: str,
+    documento: Optional[dict] = None,
+    indicaciones: str = "",
+    correcciones: str = "",
+    informe_anterior: str = "",
+) -> dict:
     url = (documento or {}).get("url", "")
     fuente = ""
     error_fuente = ""
@@ -56,6 +62,12 @@ def investigar(tema: str, documento: Optional[dict] = None, indicaciones: str = 
     if indicaciones:
         pedido += f"\nINDICACIONES DE LA DIRECTORA:\n{indicaciones}\n"
     pedido += ESTRUCTURA
+    if correcciones and informe_anterior:
+        pedido += (
+            "\nREESCRIBE el informe anterior aplicando TODAS las correcciones del Censor Doctrinal. "
+            "Quita o corrige cada cita dudosa con el texto exacto del documento y conserva lo que ya estaba bien.\n\n"
+            f"INFORME ANTERIOR:\n<<<\n{informe_anterior}\n>>>\n\nCORRECCIONES DEL CENSOR:\n{correcciones}\n"
+        )
 
     if fuente:
         pedido = f"TEXTO OFICIAL DEL DOCUMENTO (fuente: {url}):\n<<<\n{fuente}\n>>>\n\n" + pedido

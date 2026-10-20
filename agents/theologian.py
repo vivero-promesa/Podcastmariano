@@ -1,4 +1,5 @@
 """Censor Doctrinal: revisa la investigación Y el guion final contra el texto oficial."""
+import re
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -29,12 +30,38 @@ Criterio de veredicto:
 """
 
 
+def _clave(texto: str) -> str:
+    t = texto.lower().replace("…", " ").replace("...", " ")
+    t = re.sub(r"[«»\"“”'‘’]", "", t)
+    return re.sub(r"\s+", " ", t).strip(" .,;:-")
+
+
+def sin_duplicados(items: List[str]) -> List[str]:
+    """Quita repetidas y versiones recortadas («…») de una cita que ya aparece completa."""
+    candidatos = sorted({i.strip() for i in items if i and i.strip()}, key=len, reverse=True)
+    elegidos, claves = [], []
+    for item in candidatos:
+        clave = _clave(item)
+        # una versión recortada puede tener varios trozos separados por «…»
+        trozos = [_clave(t) for t in re.split(r"…|\.\.\.", item) if len(_clave(t)) > 12] or [clave]
+        if any(all(tr in k for tr in trozos) for k in claves):
+            continue
+        elegidos.append(item)
+        claves.append(clave)
+    orden = {i.strip(): n for n, i in enumerate(items) if i}
+    return sorted(elegidos, key=lambda x: orden.get(x, 0))
+
+
 def revisar(contenido: str, tipo: str = "investigación", fuente_texto: str = "") -> RevisionDoctrinal:
     pedido = ""
     if fuente_texto:
         pedido += f"TEXTO OFICIAL DE REFERENCIA:\n<<<\n{fuente_texto}\n>>>\n\n"
     pedido += f"{tipo.upper()} A REVISAR:\n<<<\n{contenido}\n>>>\n\nEntrega la revisión doctrinal."
     revision = llm.estructurado(pedido, RevisionDoctrinal, sistema=SISTEMA, temperatura=0.1)
+    revision.citas_verificadas = sin_duplicados(revision.citas_verificadas)
+    revision.citas_dudosas = sin_duplicados(revision.citas_dudosas)
+    revision.afirmaciones_a_corregir = sin_duplicados(revision.afirmaciones_a_corregir)
+    revision.observaciones = sin_duplicados(revision.observaciones)
     veredicto = revision.veredicto.strip().upper()
     revision.veredicto = veredicto if veredicto in VEREDICTOS else "CORREGIR"
     if revision.citas_dudosas and revision.veredicto == "APROBADO":
