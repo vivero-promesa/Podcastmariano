@@ -1,27 +1,19 @@
-# ─────────────────────────────────────────────
-# Podcast Mariano AI — Dependencias
-# ─────────────────────────────────────────────
+# Podcast «La maternidad no siempre tiene cuna» — dependencias
 
-# Orquestación de agentes
-langgraph>=0.2.0
-langchain-core>=0.3.0
-langchain-google-genai>=2.0.0
+# IA (SDK oficial de Google Gemini)
+google-genai>=1.20.0
+pydantic>=2.7
 
 # Interfaz web
-streamlit>=1.35.0
+streamlit>=1.50.0
+pandas>=2.0
 
-# Validación de datos
-pydantic>=2.0.0
+# Lectura de documentos oficiales (vatican.va)
+requests>=2.31
+beautifulsoup4>=4.12
 
-# Audio (Librería Gratuita)
+# Voz IA gratuita para borradores y cápsulas
 edge-tts>=6.1.12
-requests>=2.31.0
 
-# Conexión con Google Drive
-google-api-python-client>=2.0.0
-google-auth>=2.0.0
-
-# Variables de entorno
-python-dotenv>=1.0.0
-
-google-generativeai
+# Variables de entorno en local / Codespaces
+python-dotenv>=1.0
