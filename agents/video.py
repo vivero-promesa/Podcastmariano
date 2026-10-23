@@ -40,8 +40,21 @@ def normalizar_audio(origen: str, destino: str):
     _correr(["-i", origen, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "96k", destino])
 
 
-def cortar_audio(origen: str, inicio: float, fin: float, destino: str):
-    _correr(["-ss", f"{inicio:.2f}", "-to", f"{fin:.2f}", "-i", origen, "-ac", "1", "-b:a", "128k", destino])
+def cortar_audio(origen: str, inicio: float, fin: float, destino: str,
+                 margen_antes: float = 0.3, margen_despues: float = 0.8):
+    """Corta con un pequeño margen y desvanecido suave para que no quede «cortado» a mitad de palabra."""
+    inicio = max(0.0, inicio - margen_antes)
+    fin = fin + margen_despues
+    total = duracion_segundos(origen)
+    if total:
+        fin = min(fin, total)
+    dur = max(0.5, fin - inicio)
+    salida = max(0.0, dur - 0.4)
+    _correr([
+        "-ss", f"{inicio:.2f}", "-to", f"{fin:.2f}", "-i", origen,
+        "-af", f"afade=t=in:st=0:d=0.15,afade=t=out:st={salida:.2f}:d=0.4",
+        "-ac", "1", "-b:a", "128k", destino,
+    ])
 
 
 def _tiempo_srt(seg: float) -> str:
@@ -73,6 +86,7 @@ def hacer_video_vertical(
     gancho: str,
     destino: str,
     fondo: Optional[str] = None,
+    ajuste: str = "completa",
 ):
     """Arma un MP4 1080x1920 con: fondo (imagen o color), gancho arriba, onda al centro,
     subtítulos abajo y llamado a Spotify al pie."""
@@ -91,10 +105,22 @@ def hacer_video_vertical(
         nombre_fondo = "_fondo" + (os.path.splitext(fondo)[1] or ".jpg")
         _copiar(fondo, os.path.join(carpeta, nombre_fondo))
         entradas += ["-loop", "1", "-i", nombre_fondo]
-        base = (
-            "[1:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-            "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.45:t=fill,fps=30[bg]"
-        )
+        if ajuste == "llenar":
+            # Amplía la foto hasta llenar 9:16 (recorta los bordes).
+            base = (
+                "[1:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.45:t=fill,fps=30[bg]"
+            )
+        else:
+            # Foto completa, sin recortar, sobre una copia difuminada que llena la pantalla.
+            base = (
+                "[1:v]split=2[f1][f2];"
+                "[f1]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:3,"
+                "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.55:t=fill[b0];"
+                "[f2]scale=1080:1920:force_original_aspect_ratio=decrease,"
+                "drawbox=x=0:y=0:w=iw:h=ih:color=black@0.25:t=fill[fg];"
+                "[b0][fg]overlay=(W-w)/2:(H-h)/2,fps=30[bg]"
+            )
     else:
         entradas += ["-f", "lavfi", "-i", f"color=c={COLOR_FONDO}:s=1080x1920:r=30"]
         base = "[1:v]format=yuv420p[bg]"
