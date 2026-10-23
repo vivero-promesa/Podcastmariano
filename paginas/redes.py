@@ -11,6 +11,7 @@ import streamlit as st
 import config
 from agents import llm, video
 from agents.carrusel import crear_carrusel
+from agents.carrusel_imagenes import crear_imagenes, zip_imagenes
 from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_clip
 from agents.narrador import generar_audio
 from agents.publicacion import hashtags_instagram_finales, mejorar_titulos
@@ -207,12 +208,35 @@ with tab_carrusel:
     if st.button("🎨 Crear carrusel", disabled=not tema_carrusel.strip()):
         with st.spinner("Diseñando el carrusel…"):
             st.session_state.carrusel = crear_carrusel(tema_carrusel, n_diap)
+            st.session_state.carrusel_imgs = None
     car = st.session_state.get("carrusel")
     if car:
         df = pd.DataFrame([{"Titulo": d.titulo, "Texto": d.texto} for d in car.diapositivas])
         st.dataframe(df, width="stretch")
         st.download_button("⬇️ CSV para Canva (Bulk Create)", df.to_csv(index=False).encode("utf-8"), "carrusel.csv", "text/csv")
         st.text_area("Caption", value=car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags)), height=180)
+
+        st.markdown("#### 🖼️ Imágenes listas para Instagram")
+        foto_car = st.file_uploader("Foto de fondo para el carrusel (opcional)", type=["jpg", "jpeg", "png"], key="foto_carrusel")
+        if st.button("🖼️ Crear imágenes del carrusel", type="primary"):
+            ruta_foto = None
+            if foto_car is not None:
+                ruta_foto = os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo" + os.path.splitext(foto_car.name)[1].lower())
+                with open(ruta_foto, "wb") as f:
+                    f.write(foto_car.getbuffer())
+            with st.spinner("Dibujando las diapositivas…"):
+                st.session_state.carrusel_imgs = crear_imagenes(car.diapositivas, ruta_foto)
+        imgs = st.session_state.get("carrusel_imgs")
+        if imgs:
+            columnas = st.columns(4)
+            for n, datos in enumerate(imgs):
+                columnas[n % 4].image(datos, caption=f"{n + 1}/{len(imgs)}")
+            texto_caption = car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags))
+            st.download_button(
+                "⬇️ Descargar imágenes (.zip)", zip_imagenes(imgs, texto_caption),
+                file_name="carrusel.zip", mime="application/zip", type="primary",
+            )
+            st.caption("Formato 1080×1350 (4:5). En Instagram súbelas en orden como una sola publicación y pega el caption.")
 
 # ─────────────────────────── Cápsula con voz IA ───────────────────────────
 with tab_capsula:
