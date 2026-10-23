@@ -95,16 +95,58 @@ with tab_clips:
         for i, clip in enumerate(analisis.clips):
             with st.expander(f"Clip {i + 1} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
                 st.caption(f"Por qué funciona: {clip.por_que_funciona}")
+
+                # ── ✂️ Editar el clip ──
+                st.markdown("**✂️ Editar el clip**")
                 a, b, c = st.columns([1, 1, 2])
-                ini = a.text_input("Inicio", value=clip.inicio, key=f"ini_{i}")
-                fin = b.text_input("Fin", value=clip.fin, key=f"fin_{i}")
+                ini = a.text_input("Inicio (MM:SS)", value=clip.inicio, key=f"ini_{i}")
+                fin = b.text_input("Fin (MM:SS)", value=clip.fin, key=f"fin_{i}")
                 gancho = c.text_input("Gancho en pantalla", value=clip.gancho, key=f"gan_{i}")
-                if st.button("🎞️ Crear / rehacer este video", key=f"hacer_{i}"):
+                d1, d2 = st.columns(2)
+                antes = d1.number_input(
+                    "Empezar antes (segundos)", 0, 30, 0, key=f"antes_{i}",
+                    help="Si el clip arranca con una frase cortada, súmale segundos al inicio.",
+                )
+                despues = d2.number_input(
+                    "Terminar después (segundos)", 0, 30, 0, key=f"despues_{i}",
+                    help="Si la idea queda a medias, súmale segundos al final.",
+                )
+                t_ini = max(0.0, a_segundos(ini) - antes)
+                t_fin = a_segundos(fin) + despues
+                st.caption(f"Duración del clip: {t_fin - t_ini:.0f} segundos (ideal entre 30 y 90).")
+
+                # ── 🖼️ Imagen ──
+                st.markdown("**🖼️ Imagen de fondo**")
+                g1, g2 = st.columns([2, 1])
+                img_clip = g1.file_uploader(
+                    "Cambiar la imagen de este clip (opcional)", type=["jpg", "jpeg", "png"], key=f"img_{i}"
+                )
+                ajuste = g2.radio(
+                    "Cómo se ve la imagen", ["Completa (sin recortar)", "Llenar la pantalla"], key=f"ajuste_{i}",
+                    help="«Completa» muestra toda la foto con un fondo difuminado; «Llenar» la amplía y recorta los bordes.",
+                )
+                fondo_clip = trabajo["fondo"]
+                if img_clip is not None:
+                    fondo_clip = os.path.join(trabajo["carpeta"], f"fondo_clip_{i + 1}" + os.path.splitext(img_clip.name)[1].lower())
+                    with open(fondo_clip, "wb") as f:
+                        f.write(img_clip.getbuffer())
+                    g1.image(img_clip, width=120)
+
+                e1, e2 = st.columns(2)
+                if e1.button("▶️ Escuchar el tramo", key=f"oir_{i}"):
+                    try:
+                        prueba = os.path.join(trabajo["carpeta"], f"prueba_{i + 1}.mp3")
+                        video.cortar_audio(trabajo["episodio"], t_ini, t_fin, prueba)
+                        st.audio(prueba)
+                    except Exception as e:
+                        st.error(str(e))
+                if e2.button("🎞️ Crear / rehacer este video", key=f"hacer_{i}", type="primary"):
                     with st.spinner("Cortando, subtitulando y armando el video…"):
                         try:
                             st.session_state.producidos[i] = producir_clip(
-                                trabajo["episodio"], a_segundos(ini), a_segundos(fin), gancho,
-                                trabajo["carpeta"], f"clip_{i + 1}", trabajo["fondo"], con_subtitulos,
+                                trabajo["episodio"], t_ini, t_fin, gancho,
+                                trabajo["carpeta"], f"clip_{i + 1}", fondo_clip, con_subtitulos,
+                                ajuste="llenar" if ajuste == "Llenar la pantalla" else "completa",
                             )
                         except Exception as e:
                             st.session_state.producidos[i] = {"error": str(e)}
@@ -113,19 +155,23 @@ with tab_clips:
                 if hecho and hecho.get("error"):
                     st.error(hecho["error"])
                 elif hecho:
+                    st.divider()
                     v1, v2 = st.columns([1, 2])
                     with v1:
                         st.video(hecho["mp4"])
                         with open(hecho["mp4"], "rb") as f:
-                            st.download_button("⬇️ Video MP4", f.read(), file_name=f"clip_{i + 1}.mp4", key=f"dl_{i}")
+                            st.download_button("⬇️ Descargar video MP4", f.read(), file_name=f"clip_{i + 1}.mp4", key=f"dl_{i}")
                     with v2:
                         textos = textos_clip(clip, enlace_ep)
                         st.text_area("Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
-                        st.text_area("TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
+                        st.markdown("**📤 TikTok** — copia el texto con el ícono de la esquina:")
+                        st.code(textos["tiktok"], language=None)
+                        st.link_button("📤 Publicar en TikTok", "https://www.tiktok.com/tiktokstudio/upload", type="primary")
                         st.caption(
-                            f"Recuerda: enlace del episodio en la bio → {textos['enlace']}. "
-                            "En Instagram, si tu cuenta tiene la opción, compártelo como Reel de prueba (Trial Reel) "
-                            "para que lo vea primero gente que aún no te sigue."
+                            "1) Descarga el MP4 · 2) Pulsa «Publicar en TikTok» (se abre TikTok Studio) · "
+                            "3) Sube el video y pega el texto copiado. "
+                            f"Enlace del episodio en la bio → {textos['enlace']}. "
+                            "En Instagram, si tu cuenta tiene la opción, compártelo como Reel de prueba (Trial Reel)."
                         )
 
         listos = {i: d for i, d in st.session_state.producidos.items() if d and not d.get("error")}
