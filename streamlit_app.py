@@ -10,6 +10,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config  # noqa: E402
+from agents.llm import GeminiOcupado  # noqa: E402
 from paginas.comun import barra_lateral  # noqa: E402
 
 st.set_page_config(page_title=config.PODCAST["nombre_corto"], page_icon="🎙️", layout="wide")
@@ -21,4 +22,9 @@ navegacion = st.navigation(
     ]
 )
 barra_lateral()
-navegacion.run()
+try:
+    navegacion.run()
+except GeminiOcupado as e:
+    # Saturación temporal de Google: aviso amable en vez de la pantalla roja de error.
+    st.warning(str(e), icon="⏳")
+    st.caption("Tus archivos siguen cargados: solo vuelve a pulsar el mismo botón en unos minutos.")
