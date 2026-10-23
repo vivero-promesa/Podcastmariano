@@ -106,6 +106,7 @@ def producir_clip(
     nombre: str,
     fondo: str = None,
     con_subtitulos: bool = True,
+    ajuste: str = "completa",
 ) -> dict:
     os.makedirs(carpeta, exist_ok=True)
     audio = os.path.join(carpeta, f"{nombre}.mp3")
@@ -118,5 +119,5 @@ def producir_clip(
         if segmentos:
             video.escribir_srt(segmentos, srt)
             usar_srt = srt
-    video.hacer_video_vertical(audio, usar_srt, gancho, mp4, fondo=fondo)
+    video.hacer_video_vertical(audio, usar_srt, gancho, mp4, fondo=fondo, ajuste=ajuste)
     return {"mp4": mp4, "srt": usar_srt, "mp3": audio}
