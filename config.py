@@ -34,8 +34,9 @@ def api_key() -> str:
 # gemini-3.8-flash es el Flash estable desde septiembre de 2026; Google limitó el acceso
 # a los modelos 2.5 a quienes ya los usaban, así que una clave nueva podría fallar con 2.5.
 MODELO = _secreto("GEMINI_MODEL", "gemini-3.8-flash")
-# Respaldo si el modelo principal está saturado (503). Se cambia con GEMINI_MODEL_RESPALDO.
-MODELO_RESPALDO = _secreto("GEMINI_MODEL_RESPALDO", "gemini-flash-latest")
+# Respaldos en orden si el modelo principal está saturado (503), separados por comas.
+# El "lite" usa otra capacidad de Google y casi siempre responde. Se cambia con GEMINI_MODEL_RESPALDO.
+MODELO_RESPALDO = _secreto("GEMINI_MODEL_RESPALDO", "gemini-flash-latest,gemini-flash-lite-latest")
 
 # ─────────────────────────────────────────────────────────────
 # Identidad del programa
