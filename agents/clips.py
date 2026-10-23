@@ -19,6 +19,14 @@ class ClipPropuesto(BaseModel):
     texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags. Empieza con una pregunta que la gente busca")
     hashtags_instagram: List[str] = Field(description="7 hashtags temáticos con #")
     hashtags_tiktok: List[str] = Field(description="3 hashtags temáticos con #")
+    prompt_imagen: str = Field(
+        default="",
+        description=(
+            "Prompt EN INGLÉS para generar con IA la imagen de fondo vertical 9:16 de este clip: "
+            "una escena fotorrealista concreta que represente la idea del momento (sin texto, sin letras, "
+            "sin caras reconocibles de personas reales)"
+        ),
+    )
 
 
 class AnalisisEpisodio(BaseModel):
@@ -63,6 +71,9 @@ Escucha completo este episodio de «{config.PODCAST['nombre']}».
    El clip debe empezar al inicio de una frase y terminar al final de una idea.
 2. Escribe los capítulos del episodio para la descripción de Spotify.
 Usa marcas de tiempo exactas del audio. Tono: verdad con ternura, nunca condena.
+3. Para cada clip escribe prompt_imagen: una escena fotorrealista en inglés, estilo editorial católico
+   (luz divina suave, contraste cálido/frío, cruz sutil o referencia a la Creación de Adán cuando encaje),
+   que represente ESA idea concreta. Sin texto en la imagen.
 """
     return llm.estructurado(pedido, AnalisisEpisodio, temperatura=0.4, extra=[archivo])
 
@@ -107,17 +118,25 @@ def producir_clip(
     fondo: str = None,
     con_subtitulos: bool = True,
     ajuste: str = "completa",
+    movimiento: bool = True,
 ) -> dict:
     os.makedirs(carpeta, exist_ok=True)
     audio = os.path.join(carpeta, f"{nombre}.mp3")
     srt = os.path.join(carpeta, f"{nombre}.srt")
+    ass = os.path.join(carpeta, f"{nombre}.ass")
     mp4 = os.path.join(carpeta, f"{nombre}.mp4")
+    portada = os.path.join(carpeta, f"{nombre}_portada.jpg")
     video.cortar_audio(episodio_mp3, inicio, fin, audio)
-    usar_srt = None
+    usar_srt, usar_ass = None, None
     if con_subtitulos:
         segmentos = subtitular(audio)
         if segmentos:
             video.escribir_srt(segmentos, srt)
-            usar_srt = srt
-    video.hacer_video_vertical(audio, usar_srt, gancho, mp4, fondo=fondo, ajuste=ajuste)
-    return {"mp4": mp4, "srt": usar_srt, "mp3": audio}
+            video.escribir_ass(segmentos, ass)
+            usar_srt, usar_ass = srt, ass
+    video.hacer_video_vertical(audio, usar_ass, gancho, mp4, fondo=fondo, ajuste=ajuste, movimiento=movimiento)
+    try:
+        video.portada_clip(mp4, gancho, portada, segundo=0.5)
+    except Exception:
+        portada = None
+    return {"mp4": mp4, "srt": usar_srt, "mp3": audio, "portada": portada, "gancho": gancho}
