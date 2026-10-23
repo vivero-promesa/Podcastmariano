@@ -10,8 +10,10 @@ import streamlit as st
 
 import config
 from agents import llm, video
+from agents import publicar_redes as pub
 from agents.carrusel import crear_carrusel
 from agents.carrusel_imagenes import crear_imagenes, zip_imagenes
+from agents.imagenes import generar_imagen
 from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_clip
 from agents.narrador import generar_audio
 from agents.publicacion import hashtags_instagram_finales, mejorar_titulos
@@ -27,10 +29,101 @@ if not video.ffmpeg_disponible():
 st.session_state.setdefault("trabajo", None)
 st.session_state.setdefault("analisis", None)
 st.session_state.setdefault("producidos", {})
+st.session_state.setdefault("fondos_ia", {})
+st.session_state.setdefault("publicados", {})
 
 tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
     ["🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
 )
+
+# ─────────────────────────── Conexión con Instagram y TikTok ───────────────────────────
+# Regreso de «Conectar TikTok»: TikTok vuelve a esta página con ?code=…&state=…
+_qp = st.query_params
+if _qp.get("code") and _qp.get("state", "").startswith("tiktok"):
+    try:
+        nuevo_refresh = pub.cambiar_codigo_tiktok(_qp["code"])
+        st.success("✅ TikTok quedó conectado.")
+        st.markdown(
+            "Para que no tengas que conectarlo cada vez, copia este código y pégalo en "
+            "**Settings → Secrets** de Streamlit como `TIKTOK_REFRESH_TOKEN` (dura 1 año). "
+            "No lo compartas con nadie."
+        )
+        st.code(nuevo_refresh or "(TikTok no envió el código; vuelve a conectar)", language=None)
+    except Exception as e:
+        st.error(str(e))
+    st.query_params.clear()
+
+
+def _panel_conexiones():
+    with st.expander("🔌 Conexión con Instagram y TikTok (para el botón Publicar)"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Instagram**")
+            if pub.instagram_configurado():
+                if st.button("Comprobar Instagram", key="prob_ig"):
+                    try:
+                        cta = pub.instagram_cuenta()
+                        st.success(f"Conectado como @{cta['username']}")
+                    except Exception as e:
+                        st.error(str(e))
+                if st.button("🔄 Renovar token (dura 60 días)", key="renovar_ig"):
+                    try:
+                        nuevo = pub.renovar_token_instagram()
+                        if nuevo:
+                            st.success("Token renovado. Pégalo en los Secrets como INSTAGRAM_TOKEN:")
+                            st.code(nuevo, language=None)
+                        else:
+                            st.warning("Instagram no renovó el token (solo se puede si tiene más de 24 horas).")
+                    except Exception as e:
+                        st.error(str(e))
+            else:
+                st.caption("Sin conectar: falta `INSTAGRAM_TOKEN` en los Secrets. Pasos en el README, sección «Publicar desde la app».")
+        with c2:
+            st.markdown("**TikTok**")
+            if pub.tiktok_configurado():
+                modo = "borrador (llega a tu bandeja de TikTok)" if config.TIKTOK_MODO != "directo" else "publicación directa"
+                st.caption(f"Modo: {modo}")
+                if st.button("Comprobar TikTok", key="prob_tt"):
+                    try:
+                        cta = pub.tiktok_cuenta()
+                        st.success(f"Conectado como {cta['nombre'] or cta['usuario']}")
+                    except Exception as e:
+                        st.error(str(e))
+            if pub.tiktok_puede_conectar():
+                st.link_button("🔗 Conectar TikTok", pub.url_conectar_tiktok("tiktok"))
+            elif not pub.tiktok_configurado():
+                st.caption("Sin conectar: faltan `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` y `TIKTOK_REDIRECT_URI` en los Secrets. Pasos en el README.")
+        cambio = pub.refresh_tiktok_cambio()
+        if cambio and cambio != config.TIKTOK_REFRESH_TOKEN and pub.tiktok_configurado():
+            st.info("TikTok renovó tu código de acceso. Cuando puedas, actualiza `TIKTOK_REFRESH_TOKEN` en los Secrets con este:")
+            st.code(cambio, language=None)
+
+
+def _publicar(i: int, hecho: dict, texto_ig: str, texto_tt: str, en_ig: bool, en_tt: bool, prueba: bool):
+    resultado = st.session_state.publicados.setdefault(i, {})
+    with st.status("Publicando…", expanded=True) as estado:
+        if en_ig:
+            try:
+                r = pub.publicar_instagram(hecho["mp4"], texto_ig, hecho.get("portada"), prueba, avisar=st.write)
+                resultado["instagram"] = r
+                st.write(f"✅ Instagram: publicado → {r['enlace']}")
+            except Exception as e:
+                resultado["instagram_error"] = str(e)
+                st.error(str(e))
+        if en_tt:
+            try:
+                r = pub.publicar_tiktok(hecho["mp4"], texto_tt, avisar=st.write)
+                resultado["tiktok"] = r
+                if r["modo"] == "directo":
+                    st.write(f"✅ TikTok: publicado ({r['privacidad']}, estado {r['estado']})")
+                else:
+                    st.write("✅ TikTok: el video llegó a tu bandeja. Abre TikTok → notificaciones, pega el texto y publica.")
+            except Exception as e:
+                resultado["tiktok_error"] = str(e)
+                st.error(str(e))
+        ok = ("instagram" in resultado or not en_ig) and ("tiktok" in resultado or not en_tt)
+        estado.update(label="Publicado" if ok else "Revisa los avisos", state="complete" if ok else "error")
+
 
 # ─────────────────────────── Clips del episodio ───────────────────────────
 with tab_clips:
@@ -49,8 +142,12 @@ with tab_clips:
             "Número de clips", 1, 7, config.CLIPS_POR_SEMANA,
             help="Modelo vigente: 3 clips por semana, el mismo archivo en Instagram y TikTok.",
         )
-        fondo_subido = st.file_uploader("Imagen de fondo (opcional)", type=["jpg", "jpeg", "png"])
-        con_subtitulos = st.checkbox("Subtítulos automáticos", value=True)
+        fondo_subido = st.file_uploader("Imagen de fondo para todos (opcional)", type=["jpg", "jpeg", "png"])
+        con_subtitulos = st.checkbox("Subtítulos grandes (estilo Reels)", value=True)
+        movimiento = st.checkbox(
+            "Movimiento suave de la imagen", value=True,
+            help="La foto se desplaza muy despacio: retiene más que una imagen quieta.",
+        )
 
     if st.button("🎬 Encontrar los mejores momentos", type="primary", disabled=audio_subido is None):
         carpeta = tempfile.mkdtemp(prefix="clips_")
@@ -73,25 +170,61 @@ with tab_clips:
             estado.update(label=f"{len(st.session_state.analisis.clips)} momentos encontrados", state="complete", expanded=False)
         st.session_state.trabajo = {"carpeta": carpeta, "episodio": episodio, "fondo": fondo}
         st.session_state.producidos = {}
+        st.session_state.fondos_ia = {}
+        st.session_state.publicados = {}
 
     analisis = st.session_state.analisis
     trabajo = st.session_state.trabajo
     if analisis and trabajo:
+        # Imagen general cambiada después del análisis
+        if fondo_subido and not trabajo.get("fondo"):
+            trabajo["fondo"] = os.path.join(trabajo["carpeta"], "fondo" + os.path.splitext(fondo_subido.name)[1].lower())
+            with open(trabajo["fondo"], "wb") as f:
+                f.write(fondo_subido.getbuffer())
+
         st.markdown("#### Capítulos para la descripción de Spotify")
         st.code("\n".join(analisis.capitulos), language=None)
 
-        if st.button("⚙️ Crear todos los videos"):
+        def _fondo_de(i):
+            """Imagen del clip: la propia subida > la creada con IA > la general."""
+            propia = st.session_state.get(f"img_{i}")
+            if propia is not None:
+                ruta = os.path.join(trabajo["carpeta"], f"fondo_clip_{i + 1}" + os.path.splitext(propia.name)[1].lower())
+                with open(ruta, "wb") as f:
+                    f.write(propia.getbuffer())
+                return ruta
+            return st.session_state.fondos_ia.get(i) or trabajo["fondo"]
+
+        def _crear_imagen_ia(i, idea):
+            destino = os.path.join(trabajo["carpeta"], f"ia_clip_{i + 1}.jpg")
+            st.session_state.fondos_ia[i] = generar_imagen(idea, destino, "9:16")
+
+        b1, b2 = st.columns(2)
+        if b1.button("🎨 Crear imágenes con IA para todos los clips"):
+            barra = st.progress(0.0, text="Pintando…")
+            for i, clip in enumerate(analisis.clips):
+                barra.progress(i / len(analisis.clips), text=f"Imagen {i + 1} de {len(analisis.clips)}…")
+                try:
+                    _crear_imagen_ia(i, st.session_state.get(f"idea_{i}") or clip.prompt_imagen or clip.gancho)
+                except Exception as e:
+                    st.error(f"Clip {i + 1}: {e}")
+                    break
+            barra.progress(1.0, text="Imágenes listas")
+
+        if b2.button("⚙️ Crear todos los videos"):
             barra = st.progress(0.0, text="Preparando…")
             for i, clip in enumerate(analisis.clips):
                 barra.progress(i / len(analisis.clips), text=f"Clip {i + 1} de {len(analisis.clips)}: cortando, subtitulando y armando el video…")
                 try:
                     st.session_state.producidos[i] = producir_clip(
                         trabajo["episodio"], a_segundos(clip.inicio), a_segundos(clip.fin), clip.gancho,
-                        trabajo["carpeta"], f"clip_{i + 1}", trabajo["fondo"], con_subtitulos,
+                        trabajo["carpeta"], f"clip_{i + 1}", _fondo_de(i), con_subtitulos, movimiento=movimiento,
                     )
                 except Exception as e:
                     st.session_state.producidos[i] = {"error": str(e)}
             barra.progress(1.0, text="Videos listos")
+
+        _panel_conexiones()
 
         for i, clip in enumerate(analisis.clips):
             with st.expander(f"Clip {i + 1} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
@@ -114,24 +247,40 @@ with tab_clips:
                 )
                 t_ini = max(0.0, a_segundos(ini) - antes)
                 t_fin = a_segundos(fin) + despues
-                st.caption(f"Duración del clip: {t_fin - t_ini:.0f} segundos (ideal entre 30 y 90).")
+                duracion = t_fin - t_ini
+                aviso = "" if 30 <= duracion <= 90 else " ⚠️ fuera del rango ideal"
+                st.caption(f"Duración del clip: {duracion:.0f} segundos (ideal entre 30 y 90).{aviso}")
 
                 # ── 🖼️ Imagen ──
                 st.markdown("**🖼️ Imagen de fondo**")
-                g1, g2 = st.columns([2, 1])
-                img_clip = g1.file_uploader(
-                    "Cambiar la imagen de este clip (opcional)", type=["jpg", "jpeg", "png"], key=f"img_{i}"
-                )
-                ajuste = g2.radio(
-                    "Cómo se ve la imagen", ["Completa (sin recortar)", "Llenar la pantalla"], key=f"ajuste_{i}",
-                    help="«Completa» muestra toda la foto con un fondo difuminado; «Llenar» la amplía y recorta los bordes.",
-                )
-                fondo_clip = trabajo["fondo"]
-                if img_clip is not None:
-                    fondo_clip = os.path.join(trabajo["carpeta"], f"fondo_clip_{i + 1}" + os.path.splitext(img_clip.name)[1].lower())
-                    with open(fondo_clip, "wb") as f:
-                        f.write(img_clip.getbuffer())
-                    g1.image(img_clip, width=120)
+                g1, g2, g3 = st.columns([2, 2, 1])
+                with g1:
+                    idea = st.text_area(
+                        "Idea de la imagen (la IA la pinta en estilo editorial católico)",
+                        value=clip.prompt_imagen or clip.gancho, height=110, key=f"idea_{i}",
+                    )
+                    if st.button("🎨 Crear imagen con IA", key=f"ia_{i}"):
+                        with st.spinner("Pintando la imagen…"):
+                            try:
+                                _crear_imagen_ia(i, idea)
+                            except Exception as e:
+                                st.error(str(e))
+                with g2:
+                    st.file_uploader("O sube tu propia imagen (tiene prioridad)", type=["jpg", "jpeg", "png"], key=f"img_{i}")
+                    ajuste = st.radio(
+                        "Cómo se ve la imagen", ["Llenar la pantalla", "Completa (sin recortar)"], key=f"ajuste_{i}",
+                        help="«Llenar» amplía la foto y recorta los bordes (ideal para imágenes de la IA, ya verticales); "
+                             "«Completa» muestra toda la foto con un fondo difuminado.",
+                    )
+                with g3:
+                    actual = _fondo_de(i)
+                    if actual:
+                        st.image(actual, caption="Imagen actual", width=130)
+                        if st.session_state.fondos_ia.get(i) and actual == st.session_state.fondos_ia[i]:
+                            with open(actual, "rb") as f:
+                                st.download_button("⬇️ Imagen", f.read(), file_name=f"imagen_clip_{i + 1}.jpg", key=f"dl_img_{i}")
+                    else:
+                        st.caption("Sin imagen: fondo morado del podcast.")
 
                 e1, e2 = st.columns(2)
                 if e1.button("▶️ Escuchar el tramo", key=f"oir_{i}"):
@@ -146,8 +295,9 @@ with tab_clips:
                         try:
                             st.session_state.producidos[i] = producir_clip(
                                 trabajo["episodio"], t_ini, t_fin, gancho,
-                                trabajo["carpeta"], f"clip_{i + 1}", fondo_clip, con_subtitulos,
+                                trabajo["carpeta"], f"clip_{i + 1}", _fondo_de(i), con_subtitulos,
                                 ajuste="llenar" if ajuste == "Llenar la pantalla" else "completa",
+                                movimiento=movimiento,
                             )
                         except Exception as e:
                             st.session_state.producidos[i] = {"error": str(e)}
@@ -162,18 +312,49 @@ with tab_clips:
                         st.video(hecho["mp4"])
                         with open(hecho["mp4"], "rb") as f:
                             st.download_button("⬇️ Descargar video MP4", f.read(), file_name=f"clip_{i + 1}.mp4", key=f"dl_{i}")
+                        if hecho.get("portada"):
+                            with open(hecho["portada"], "rb") as f:
+                                st.download_button("⬇️ Portada JPG", f.read(), file_name=f"clip_{i + 1}_portada.jpg", key=f"dlp_{i}")
                     with v2:
                         textos = textos_clip(clip, enlace_ep)
-                        st.text_area("Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
-                        st.markdown("**📤 TikTok** — copia el texto con el ícono de la esquina:")
-                        st.code(textos["tiktok"], language=None)
-                        st.link_button("📤 Publicar en TikTok", "https://www.tiktok.com/tiktokstudio/upload", type="primary")
-                        st.caption(
-                            "1) Descarga el MP4 · 2) Pulsa «Publicar en TikTok» (se abre TikTok Studio) · "
-                            "3) Sube el video y pega el texto copiado. "
-                            f"Enlace del episodio en la bio → {textos['enlace']}. "
-                            "En Instagram, si tu cuenta tiene la opción, compártelo como Reel de prueba (Trial Reel)."
+                        texto_ig = st.text_area("Texto para Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
+                        texto_tt = st.text_area("Texto para TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
+
+                        # ── 🚀 Publicar ──
+                        st.markdown("**🚀 Publicar**")
+                        hay_ig, hay_tt = pub.instagram_configurado(), pub.tiktok_configurado()
+                        p1, p2, p3 = st.columns(3)
+                        en_ig = p1.checkbox("Instagram", value=hay_ig, disabled=not hay_ig, key=f"pub_ig_{i}")
+                        en_tt = p2.checkbox("TikTok", value=hay_tt, disabled=not hay_tt, key=f"pub_tt_{i}")
+                        prueba = p3.checkbox(
+                            "Reel de prueba", value=False, disabled=not hay_ig, key=f"pub_prueba_{i}",
+                            help="Instagram lo muestra primero a quien aún no te sigue. Si tu cuenta no lo admite, sale como Reel normal.",
                         )
+                        ya = st.session_state.publicados.get(i, {})
+                        repetir = True
+                        if ya.get("instagram") or ya.get("tiktok"):
+                            st.caption(
+                                "Ya publicado: "
+                                + (f"[Instagram]({ya['instagram']['enlace']}) " if ya.get("instagram") else "")
+                                + ("· TikTok" if ya.get("tiktok") else "")
+                            )
+                            repetir = st.checkbox("Sí, quiero publicarlo otra vez", key=f"otra_{i}")
+                        if hay_ig or hay_tt:
+                            destinos = " y ".join(n for n, s in (("Instagram", en_ig), ("TikTok", en_tt)) if s) or "…"
+                            if st.button(f"🚀 Publicar en {destinos}", key=f"pub_{i}", type="primary",
+                                         disabled=not (en_ig or en_tt) or not repetir):
+                                _publicar(i, hecho, texto_ig, texto_tt, en_ig, en_tt, prueba)
+                        if not (hay_ig and hay_tt):
+                            st.caption(
+                                "Para publicar con un clic conecta las cuentas (🔌 arriba). Mientras tanto, manual: "
+                                "descarga el MP4 y súbelo con estos botones, pegando el texto."
+                            )
+                            m1, m2 = st.columns(2)
+                            if not hay_ig:
+                                m1.link_button("Abrir Instagram", "https://www.instagram.com/", key=f"m_ig_{i}")
+                            if not hay_tt:
+                                m2.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"m_tt_{i}")
+                        st.caption(f"Enlace del episodio para la bio → {textos['enlace']}")
 
         listos = {i: d for i, d in st.session_state.producidos.items() if d and not d.get("error")}
         if listos:
@@ -183,8 +364,12 @@ with tab_clips:
                     z.write(d["mp4"], f"clip_{i + 1}.mp4")
                     if d.get("srt"):
                         z.write(d["srt"], f"clip_{i + 1}.srt")
+                    if d.get("portada"):
+                        z.write(d["portada"], f"clip_{i + 1}_portada.jpg")
                     t = textos_clip(analisis.clips[i], enlace_ep)
-                    z.writestr(f"clip_{i + 1}_textos.txt", f"INSTAGRAM\n{t['instagram']}\n\nTIKTOK\n{t['tiktok']}\n")
+                    ig = st.session_state.get(f"ig_{i}", t["instagram"])
+                    tt = st.session_state.get(f"tt_{i}", t["tiktok"])
+                    z.writestr(f"clip_{i + 1}_textos.txt", f"INSTAGRAM\n{ig}\n\nTIKTOK\n{tt}\n")
                 z.writestr("capitulos_spotify.txt", "\n".join(analisis.capitulos))
             st.download_button("⬇️ Descargar todos los clips (.zip)", buffer.getvalue(), file_name="clips.zip", mime="application/zip")
 
@@ -217,9 +402,22 @@ with tab_carrusel:
         st.text_area("Caption", value=car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags)), height=180)
 
         st.markdown("#### 🖼️ Imágenes listas para Instagram")
-        foto_car = st.file_uploader("Foto de fondo para el carrusel (opcional)", type=["jpg", "jpeg", "png"], key="foto_carrusel")
+        k1, k2 = st.columns(2)
+        foto_car = k1.file_uploader("Foto de fondo para el carrusel (opcional)", type=["jpg", "jpeg", "png"], key="foto_carrusel")
+        with k2:
+            idea_car = st.text_input("O pide la foto a la IA", value=tema_carrusel, key="idea_carrusel")
+            if st.button("🎨 Crear foto de fondo con IA", key="ia_carrusel"):
+                with st.spinner("Pintando la foto…"):
+                    try:
+                        st.session_state.foto_car_ia = generar_imagen(
+                            idea_car, os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo_ia.jpg"), "4:5"
+                        )
+                    except Exception as e:
+                        st.error(str(e))
+            if st.session_state.get("foto_car_ia") and foto_car is None:
+                st.image(st.session_state.foto_car_ia, width=120, caption="Foto de la IA")
         if st.button("🖼️ Crear imágenes del carrusel", type="primary"):
-            ruta_foto = None
+            ruta_foto = st.session_state.get("foto_car_ia")
             if foto_car is not None:
                 ruta_foto = os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo" + os.path.splitext(foto_car.name)[1].lower())
                 with open(ruta_foto, "wb") as f:

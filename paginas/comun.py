@@ -17,6 +17,9 @@ def barra_lateral():
         st.markdown("**Estado de conexiones**")
         st.write(("✅" if config.api_key() else "❌") + " Clave de Gemini")
         st.write(("✅" if video.ffmpeg_disponible() else "❌") + " ffmpeg (clips de video)")
+        st.write(("✅" if config.INSTAGRAM_TOKEN else "⚪") + " Instagram (publicar)")
+        tiktok = config.TIKTOK_CLIENT_KEY and config.TIKTOK_REFRESH_TOKEN
+        st.write(("✅" if tiktok else "⚪") + " TikTok (publicar)")
         st.caption(f"Modelo: {config.MODELO}")
 
 
