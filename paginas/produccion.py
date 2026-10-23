@@ -14,6 +14,7 @@ import streamlit as st
 
 import config
 from agents import historial as hist
+from agents import borrador
 from agents.enfoques import proponer_enfoques, puntos_tratados
 from agents.investigator import investigar
 from agents.narrador import generar_audio
@@ -69,9 +70,27 @@ st.title("🎙️ Estudio de producción")
 st.caption("Del documento de la Iglesia al episodio listo para grabar y publicar el viernes.")
 exigir_clave()
 
+# ─────────────────────────── Recuperar trabajo guardado ───────────────────────────
+st.session_state.setdefault("duracion", 18)
+if "_borrador" not in st.session_state:
+    st.session_state._borrador = borrador.cargar()
+_b = st.session_state._borrador
+if _b and not st.session_state.get("inv") and not st.session_state.get("enfoques"):
+    with st.container(border=True):
+        st.info(f"💾 Tienes trabajo guardado ({_b.get('fecha', '')}): **{_b.get('resumen', '')}**")
+        r1, r2 = st.columns(2)
+        r1.button("↩️ Recuperar mi trabajo", type="primary", on_click=borrador.restaurar, args=(st.session_state, _b))
+        if r2.button("🗑️ Descartarlo y empezar de cero"):
+            borrador.borrar()
+            st.session_state._borrador = None
+            st.rerun()
+
 if st.button("🔄 Empezar episodio nuevo"):
     reiniciar()
     st.session_state.enfoques = None
+    borrador.borrar()
+    st.session_state._borrador = None
+    st.session_state.pop("_borrador_huella", None)
     st.rerun()
 
 
@@ -215,7 +234,7 @@ with c1:
         help="Escríbelo como lo buscaría la gente. Ej.: «¿La FIV es pecado? Lo que dice la Iglesia»",
     )
 with c2:
-    duracion = st.slider("Duración (minutos)", 8, 25, 18)
+    duracion = st.slider("Duración (minutos)", 8, 25, key="duracion")
 indic_inv = st.text_area("Indicaciones para la investigación (opcional)", height=90)
 
 indicaciones = indic_inv
@@ -377,3 +396,11 @@ with st.expander(f"📖 Historial de episodios ({len(historial['episodios'])})")
     if st.button("🔄 Recargar historial"):
         recargar_historial()
         st.rerun()
+
+# ─────────────────────────── Guardado automático ───────────────────────────
+try:
+    _hora = borrador.autoguardar(st.session_state)
+    if _hora:
+        st.caption(f"💾 Guardado automático: {_hora}. Si la página se recarga, usa «Recuperar mi trabajo».")
+except Exception as _e:
+    st.caption(f"⚠️ No pude hacer el guardado automático: {_e}")
