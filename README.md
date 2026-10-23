@@ -52,6 +52,9 @@ Cada tarea se hace en un solo lugar. Los enfoques, la investigación, el guion, 
   - 📖 **Historial de episodios**: todos los episodios con sus documentos y los puntos profundizados.
 - **Estudio de Redes** (`paginas/redes.py`):
   - 🎬 **Clips del episodio**: subes el audio, la IA elige los mejores momentos (30-90 s) y arma videos con subtítulos y sus textos. Opcional: pega el enlace del episodio para que los textos lo usen. También da los capítulos para Spotify.
+    - Video: subtítulos grandes estilo Reels (3-4 palabras, la palabra clave en dorado), todo dentro de la zona que no tapan los botones de Instagram y TikTok, volumen parejo (-14 LUFS), movimiento suave de la foto y portada JPG de cada clip.
+    - 🎨 **Imagen con IA por clip**: la IA propone una escena para cada momento y Gemini la pinta en vertical (estilo editorial católico, sin texto). Puedes editar la idea, rehacerla o subir tu propia foto (tiene prioridad).
+    - 🚀 **Publicar en Instagram y TikTok** con un botón (ver «Publicar desde la app»). Sin conexión, la app deja descargar y abrir cada red para subirlo a mano.
   - 🔤 **Títulos para el buscador**: reescribe los títulos de episodios ya publicados.
   - ⏸️ **Carrusel** y ⏸️ **Cápsula con voz IA**: en pausa.
 
@@ -115,13 +118,61 @@ python main.py
 | `GITHUB_TOKEN` | Guardar el historial y los documentos nuevos en este repositorio | GitHub → Fine-grained token con Contents: Read and write (ver arriba) |
 | `GEMINI_MODEL` | Opcional, por defecto `gemini-3.8-flash` | — |
 | `VOZ_IA` | Opcional, por defecto `es-CO-SalomeNeural` | — |
+| `GEMINI_MODELO_IMAGEN` | Opcional: modelos de Gemini para imágenes, separados por comas. Si no responden, la app busca uno disponible | — |
+| `INSTAGRAM_TOKEN` | Botón Publicar: Instagram | Ver «Publicar desde la app» |
+| `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` / `TIKTOK_REDIRECT_URI` / `TIKTOK_REFRESH_TOKEN` / `TIKTOK_MODO` | Botón Publicar: TikTok | Ver «Publicar desde la app» |
 | `GITHUB_REPO` / `GITHUB_BRANCH` | Opcionales, por defecto `vivero-promesa/Podcastmariano` y `main` | — |
+
+## Publicar desde la app (Instagram y TikTok)
+
+El botón **🚀 Publicar** de cada clip sube el mismo video a las dos redes con su texto. Cada red se conecta una sola vez; si una no está conectada, el botón publica solo en la otra.
+
+### Instagram (no necesita Facebook ni página de Facebook)
+
+Usa la «API de Instagram con inicio de sesión de Instagram». Requisitos: la cuenta @cienciamasconciencia debe ser **profesional** (Creador o Empresa), que se cambia gratis en la app de Instagram → Configuración → Tipo de cuenta.
+
+1. Entra a https://developers.facebook.com → **Mis apps → Crear app** → caso de uso **«Administrar mensajes y contenido en Instagram»**. (Meta puede pedir entrar con una cuenta de Meta para registrarte como desarrolladora; el podcast sigue sin usar Facebook.)
+2. En **Instagram → Configuración de la API con inicio de sesión de Instagram** → **Generar tokens de acceso** → **Agregar cuenta** e inicia sesión con @cienciamasconciencia.
+3. Copia el token y pégalo en **Settings → Secrets** de Streamlit:
+
+```toml
+INSTAGRAM_TOKEN = "IGAA…"
+```
+
+El token dura **60 días**. Antes de que venza, en la app usa **🔌 Conexión → 🔄 Renovar token** y pega el nuevo en los Secrets.
+
+Cómo publica: Instagram descarga el video desde una dirección pública, así que la app lo sube un momento a `litterbox.catbox.moe` (se borra solo en 1 hora), crea el Reel, espera a que Instagram lo procese y lo publica. Si marcas **Reel de prueba** y tu cuenta lo admite, se muestra primero a quien aún no te sigue.
+
+Mientras la app de Meta esté en «modo desarrollo» solo publica en las cuentas agregadas en el paso 2, que es justo lo que se necesita: no hace falta revisión de Meta.
+
+### TikTok
+
+1. Entra a https://developers.tiktok.com con la cuenta @cienciamasconciencia → **Manage apps → Connect an app**.
+2. Agrega los productos **Login Kit** y **Content Posting API** (activa «Direct Post» si más adelante quieres publicar directo).
+3. En **Login Kit → Redirect URI** pon la dirección de la página de Redes, por ejemplo `https://tu-app.streamlit.app/redes`.
+4. Permisos (scopes): `user.info.basic`, `video.upload`, `video.publish`.
+5. Para probar sin revisión usa **Sandbox** y agrega @cienciamasconciencia como usuario de prueba (Target users).
+6. Pega en los Secrets:
+
+```toml
+TIKTOK_CLIENT_KEY = "…"
+TIKTOK_CLIENT_SECRET = "…"
+TIKTOK_REDIRECT_URI = "https://tu-app.streamlit.app/redes"
+TIKTOK_MODO = "borrador"
+```
+
+7. En la app: **Estudio de Redes → 🔌 Conexión → 🔗 Conectar TikTok**. Al volver, la app muestra un código: pégalo en los Secrets como `TIKTOK_REFRESH_TOKEN` (dura 1 año).
+
+Modos:
+
+- **`borrador`** (recomendado al comienzo): el video llega a tu bandeja de TikTok (notificaciones). Abres TikTok, pegas el texto, eliges sonido o portada si quieres, y publicas. Funciona sin auditoría.
+- **`directo`**: se publica con el texto de una vez. TikTok solo lo permite en público después de **auditar** la app; antes de eso solo deja publicar como privado.
 
 ## Qué sigue siendo manual (a propósito)
 
 - Grabar el episodio con tu voz.
 - Subir el audio a Spotify for Creators: Spotify no ofrece una API pública para publicar episodios.
-- Programar los clips en Instagram y TikTok.
+- Programar los clips para otro día: el botón publica en el momento. Para dejar un clip programado, usa la app de Instagram o TikTok Studio.
 - Las dos aprobaciones de la Directora: ningún contenido avanza sin tu visto bueno.
 
 ## Estructura
@@ -144,6 +195,9 @@ python main.py
 | `agents/script_writer.py` | Guionista |
 | `agents/publicacion.py` | Títulos, descripción, hashtags |
 | `agents/clips.py` | Selección de momentos, subtítulos y textos de cada clip |
-| `agents/video.py` | ffmpeg: cortes y videos 9:16 |
+| `agents/video.py` | ffmpeg: cortes, volumen parejo, subtítulos estilo Reels y videos 9:16 |
+| `agents/imagenes.py` | Imágenes con IA (Gemini) para clips y carrusel |
+| `agents/publicar_redes.py` | Publicación en Instagram (Reel) y TikTok |
+| `agents/carrusel_imagenes.py` | Diapositivas del carrusel como imágenes |
 | `agents/carrusel.py` | Carrusel para Canva (en pausa) |
 | `agents/narrador.py` | Voz IA con edge-tts (en pausa) |

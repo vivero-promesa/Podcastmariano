@@ -38,6 +38,27 @@ MODELO = _secreto("GEMINI_MODEL", "gemini-3.8-flash")
 # El "lite" usa otra capacidad de Google y casi siempre responde. Se cambia con GEMINI_MODEL_RESPALDO.
 MODELO_RESPALDO = _secreto("GEMINI_MODEL_RESPALDO", "gemini-flash-latest,gemini-flash-lite-latest")
 
+# Modelos de Gemini que crean imágenes (fondos de clips y carrusel), en orden. Si ninguno
+# responde, la app busca sola uno disponible en tu cuenta. Se cambia con GEMINI_MODELO_IMAGEN.
+MODELO_IMAGEN = _secreto("GEMINI_MODELO_IMAGEN", "gemini-2.5-flash-image,gemini-3-pro-image-preview")
+
+# ─────────────────────────────────────────────────────────────
+# Publicación directa en redes (opcional; sin estas claves la app usa el modo manual)
+# ─────────────────────────────────────────────────────────────
+# Instagram: token de la «API de Instagram con inicio de sesión de Instagram» (no usa Facebook).
+INSTAGRAM_TOKEN = _secreto("INSTAGRAM_TOKEN")
+INSTAGRAM_API_VERSION = _secreto("INSTAGRAM_API_VERSION", "v23.0")
+# TikTok: app de TikTok for Developers con Content Posting API.
+TIKTOK_CLIENT_KEY = _secreto("TIKTOK_CLIENT_KEY")
+TIKTOK_CLIENT_SECRET = _secreto("TIKTOK_CLIENT_SECRET")
+TIKTOK_REFRESH_TOKEN = _secreto("TIKTOK_REFRESH_TOKEN")
+# Dirección de esta página tal como está registrada en TikTok (Redirect URI), p. ej.
+# https://tu-app.streamlit.app/redes
+TIKTOK_REDIRECT_URI = _secreto("TIKTOK_REDIRECT_URI")
+# «borrador»: el video llega a tu bandeja de TikTok y tú lo publicas desde la app (funciona sin auditoría).
+# «directo»: se publica de una vez (TikTok lo permite en público solo cuando aprueba la auditoría de la app).
+TIKTOK_MODO = _secreto("TIKTOK_MODO", "borrador").strip().lower()
+
 # ─────────────────────────────────────────────────────────────
 # Identidad del programa
 # ─────────────────────────────────────────────────────────────
