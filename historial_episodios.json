@@ -3,17 +3,27 @@
     {
       "numero": 1,
       "fecha": null,
-      "documentos": ["DV"],
-      "documentos_titulos": ["Donum Vitae"],
+      "documentos": [
+        "DV"
+      ],
+      "documentos_titulos": [
+        "Donum Vitae"
+      ],
       "enfoque": "¿Es pecado la fecundación in vitro (FIV)?",
       "titulo": "¿Es pecado la fecundación in vitro (FIV)? — Donum Vitae",
-      "puntos": ["El hijo es un don, no un derecho"]
+      "puntos": [
+        "El hijo es un don, no un derecho"
+      ]
     },
     {
       "numero": 2,
       "fecha": null,
-      "documentos": ["HV"],
-      "documentos_titulos": ["Humanae Vitae"],
+      "documentos": [
+        "HV"
+      ],
+      "documentos_titulos": [
+        "Humanae Vitae"
+      ],
       "enfoque": "Anticonceptivos y apertura a la vida",
       "titulo": "Anticonceptivos y apertura a la vida — Humanae Vitae",
       "puntos": []
@@ -21,26 +31,45 @@
     {
       "numero": 3,
       "fecha": null,
-      "documentos": ["GS"],
-      "documentos_titulos": ["Gaudium et Spes (n. 14 «Corpore et anima unus» y n. 51)"],
+      "documentos": [
+        "GS"
+      ],
+      "documentos_titulos": [
+        "Gaudium et Spes (n. 14 «Corpore et anima unus» y n. 51)"
+      ],
       "enfoque": "Cuerpo y alma",
       "titulo": "Cuerpo y alma — Corpore et anima unus",
-      "puntos": ["Unidad cuerpo-alma de la persona humana"]
+      "puntos": [
+        "Unidad cuerpo-alma de la persona humana"
+      ]
     },
     {
       "numero": 4,
       "fecha": null,
-      "documentos": ["DP"],
-      "documentos_titulos": ["Dignitas Personae"],
+      "documentos": [
+        "DP"
+      ],
+      "documentos_titulos": [
+        "Dignitas Personae"
+      ],
       "enfoque": "Embriones congelados, clonación y células madre",
       "titulo": "Embriones congelados, clonación y células madre — Dignitas Personae",
-      "puntos": ["Clonación", "Investigación con células madre", "Congelación de embriones", "Diagnóstico preimplantatorio"]
+      "puntos": [
+        "Clonación",
+        "Investigación con células madre",
+        "Congelación de embriones",
+        "Diagnóstico preimplantatorio"
+      ]
     },
     {
       "numero": 5,
       "fecha": null,
-      "documentos": ["NCAS"],
-      "documentos_titulos": ["Nueva Carta de los Agentes Sanitarios"],
+      "documentos": [
+        "NCAS"
+      ],
+      "documentos_titulos": [
+        "Nueva Carta de los Agentes Sanitarios"
+      ],
       "enfoque": "Médicos y enfermeras católicos",
       "titulo": "Médicos y enfermeras católicos — Nueva Carta de los Agentes Sanitarios (2017)",
       "puntos": []
@@ -57,8 +86,12 @@
     {
       "numero": 7,
       "fecha": "2026-05-27",
-      "documentos": ["MH"],
-      "documentos_titulos": ["Magnifica Humanitas"],
+      "documentos": [
+        "MH"
+      ],
+      "documentos_titulos": [
+        "Magnifica Humanitas"
+      ],
       "enfoque": "Papa León XIV: tecnología y dignidad humana",
       "titulo": "Papa León XIV: tecnología y dignidad humana — Magnifica Humanitas",
       "puntos": []
@@ -80,6 +113,26 @@
       "enfoque": "¿Cuándo empieza la vida humana?",
       "titulo": "¿Cuándo empieza la vida humana? El vientre materno, santuario de vida",
       "puntos": []
+    },
+    {
+      "numero": 10,
+      "fecha": "2026-10-29",
+      "documentos": [
+        "EV"
+      ],
+      "documentos_titulos": [
+        "Evangelium Vitae"
+      ],
+      "enfoque": "Cultura de la vida frente a cultura de la muerte",
+      "titulo": "Infertilidad católica y embriones congelados | Evangelium Vitae",
+      "puntos": [
+        "Diferencia entre la cultura de la vida y la cultura de la muerte según san Juan Pablo II.",
+        "Ilicitud de la eliminación directa y voluntaria de un ser humano inocente.",
+        "Inmoralidad de las técnicas de reproducción artificial que separan la procreación del acto conyugal.",
+        "El embrión humano debe ser respetado y tratado como persona desde el instante de su concepción.",
+        "El dolor de la infertilidad no justifica el uso de tecnologías que manipulan o descartan embriones.",
+        "Criterio moral de limitación de daños para parlamentarios provida ante leyes sobre el aborto."
+      ]
     }
   ],
   "documentos_extra": [
