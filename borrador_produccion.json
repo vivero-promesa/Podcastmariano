@@ -1,5 +1,5 @@
 {
-  "fecha": "29/10/2026 03:07 PM",
+  "fecha": "29/10/2026 03:12 PM",
   "resumen": "Cultura de la vida frente a cultura de la muerte — llegaste hasta: investigación",
   "estado": {
     "docs_sel": [
@@ -48,6 +48,6 @@
         ]
       }
     },
-    "ok_inv": false
+    "ok_inv": true
   }
 }
