@@ -1,6 +1,6 @@
 {
-  "fecha": "29/10/2026 03:39 PM",
-  "resumen": "Cultura de la vida frente a cultura de la muerte — llegaste hasta: guion",
+  "fecha": "29/10/2026 03:41 PM",
+  "resumen": "Cultura de la vida frente a cultura de la muerte — llegaste hasta: paquete de publicación",
   "estado": {
     "docs_sel": [
       "EV"
@@ -73,6 +73,44 @@
         ]
       }
     },
-    "ok_guion": true
+    "ok_guion": true,
+    "paquete": {
+      "__modelo__": "agents.publicacion:PaqueteEpisodio",
+      "datos": {
+        "titulos": [
+          "¿La FIV es pecado? Lo que dice la Iglesia sobre la Evangelium Vitae",
+          "Infertilidad católica y embriones congelados | Evangelium Vitae",
+          "¿El vientre de alquiler es pecado? La Iglesia y la vida | Evangelium Vitae"
+        ],
+        "descripcion": "La maternidad no siempre tiene cuna; a veces tiene cruz. En este episodio reflexionamos profundamente sobre la cultura de la vida frente a la cultura de la muerte, inspirados en la encíclica Evangelium Vitae del Papa san Juan Pablo II.\n\nConversamos con el corazón en la mano sobre el dolor de la infertilidad, las implicaciones morales de la fecundación in vitro y la reproducción asistida, y cómo la Iglesia abraza y comprende el anhelo de ser madre sin caer en los tentáculos de la cultura del descarte.\n\nUn espacio íntimo y lleno de esperanza para descubrir que nuestra dignidad no depende de un test de embarazo, sino del amor infinito de un Dios que nos mira con entrañas de misericordia.",
+        "palabras_clave": [
+          "FIV",
+          "fecundación in vitro",
+          "infertilidad católica",
+          "embriones congelados",
+          "vientre de alquiler",
+          "anticonceptivos",
+          "Iglesia católica",
+          "Evangelium Vitae"
+        ],
+        "hashtags_instagram": [
+          "#CatolicosDeMexico",
+          "#CatolicosDeColombia",
+          "#InfertilidadCatolica",
+          "#CulturaDeLaVida",
+          "#EvangeliumVitae",
+          "#MadresCatolicas",
+          "#FeYEsperanza",
+          "#IglesiaCatolica"
+        ],
+        "hashtags_tiktok": [
+          "#catolicos",
+          "#maternidad",
+          "#fiv"
+        ],
+        "texto_portada": "La maternidad y la cruz",
+        "prompt_portada": "Photorealistic Catholic editorial style, soft divine light, warm vs cold contrast, subtle cross or Creation of Adam reference, no text, 1:1"
+      }
+    }
   }
 }
