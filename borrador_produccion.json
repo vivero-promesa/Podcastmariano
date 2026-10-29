@@ -1,5 +1,5 @@
 {
-  "fecha": "29/10/2026 03:44 PM",
+  "fecha": "29/10/2026 04:06 PM",
   "resumen": "Cultura de la vida frente a cultura de la muerte — llegaste hasta: paquete de publicación",
   "estado": {
     "docs_sel": [
@@ -73,7 +73,7 @@
         ]
       }
     },
-    "ok_guion": true,
+    "ok_guion": false,
     "paquete": {
       "__modelo__": "agents.publicacion:PaqueteEpisodio",
       "datos": {
