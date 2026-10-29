@@ -1,5 +1,5 @@
 {
-  "fecha": "29/10/2026 03:31 PM",
+  "fecha": "29/10/2026 03:39 PM",
   "resumen": "Cultura de la vida frente a cultura de la muerte — llegaste hasta: guion",
   "estado": {
     "docs_sel": [
@@ -73,6 +73,6 @@
         ]
       }
     },
-    "ok_guion": false
+    "ok_guion": true
   }
 }
