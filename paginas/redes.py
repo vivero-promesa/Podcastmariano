@@ -74,7 +74,7 @@ def _panel_conexiones():
                             st.success("Token renovado. Pégalo en los Secrets como INSTAGRAM_TOKEN:")
                             st.code(nuevo, language=None)
                         else:
-                            st.warning("Instagram no renovó el token (solo se puede si tiene más de 24 horas).")
+                            st.warning("Instagram no renovó el token. Si es un token de usuario del sistema (EAA…), no vence y no hace falta renovarlo.")
                     except Exception as e:
                         st.error(str(e))
             else:

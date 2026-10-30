@@ -1,6 +1,6 @@
 """Publicación directa de los clips en Instagram (Reel) y TikTok.
 
-INSTAGRAM — «API de Instagram con inicio de sesión de Instagram» (no necesita Facebook).
+INSTAGRAM — API de Instagram con token «IGAA…» (inicio de sesión de Instagram) o token de usuario del sistema «EAA…» (no necesita página de Facebook).
   Instagram descarga el video desde una dirección pública: la app lo sube a un
   alojamiento temporal (litterbox.catbox.moe, se borra solo en 1 hora), crea el Reel,
   espera a que Instagram lo procese y lo publica.
@@ -52,8 +52,14 @@ def subir_temporal(ruta: str, horas: str = "1h") -> str:
 _IG = {"token": None}
 
 
+def _ig_con_instagram() -> bool:
+    """Los tokens «IGAA…» van a graph.instagram.com; los demás (usuario del sistema) a graph.facebook.com."""
+    return _ig_token().startswith("IG")
+
+
 def _ig_base() -> str:
-    return f"https://graph.instagram.com/{config.INSTAGRAM_API_VERSION}"
+    servidor = "graph.instagram.com" if _ig_con_instagram() else "graph.facebook.com"
+    return f"https://{servidor}/{config.INSTAGRAM_API_VERSION}"
 
 
 def instagram_configurado() -> bool:
@@ -81,12 +87,22 @@ def _ig(metodo: str, ruta: str, **params) -> dict:
 
 def instagram_cuenta() -> dict:
     """{'id': ..., 'username': ...} de la cuenta conectada."""
+    if not _ig_con_instagram():
+        if not config.INSTAGRAM_USER_ID:
+            raise ErrorPublicacion(
+                "Falta INSTAGRAM_USER_ID en los Secrets: con el token de usuario del sistema hay que indicar el ID de la cuenta de Instagram."
+            )
+        d = _ig("GET", config.INSTAGRAM_USER_ID, fields="id,username")
+        return {"id": d.get("id") or config.INSTAGRAM_USER_ID, "username": d.get("username", "")}
     d = _ig("GET", "me", fields="user_id,username")
     return {"id": d.get("user_id") or d.get("id"), "username": d.get("username", "")}
 
 
 def renovar_token_instagram() -> Optional[str]:
-    """Renueva el token de larga duración (otros 60 días). Devuelve el token nuevo para pegarlo en Secrets."""
+    """Renueva el token «IGAA…» de larga duración (otros 60 días). Devuelve el token nuevo para pegarlo en Secrets.
+    El token de usuario del sistema no vence y no necesita renovarse."""
+    if not _ig_con_instagram():
+        return None
     r = requests.get(
         "https://graph.instagram.com/refresh_access_token",
         params={"grant_type": "ig_refresh_token", "access_token": _ig_token()},
