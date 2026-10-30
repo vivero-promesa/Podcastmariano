@@ -1,4 +1,4 @@
-"""Estudio de Redes: clips virales desde el episodio grabado, títulos para el buscador,
+"""Estudio de Redes: planeación (calendario, estrategia, métricas), clips virales desde el episodio grabado, títulos para el buscador,
 carruseles para Canva y cápsulas con voz IA."""
 import io
 import os
@@ -18,6 +18,7 @@ from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_cl
 from agents.narrador import generar_audio
 from agents.publicacion import hashtags_instagram_finales, mejorar_titulos
 from paginas.comun import exigir_clave
+from paginas import planeacion_ui
 
 st.title("📱 Estudio de Redes")
 st.caption("Cada clip lleva a Spotify: gancho en pantalla, subtítulos y «Episodio completo en Spotify».")
@@ -32,8 +33,8 @@ st.session_state.setdefault("producidos", {})
 st.session_state.setdefault("fondos_ia", {})
 st.session_state.setdefault("publicados", {})
 
-tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
-    ["🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
+tab_plan, tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
+    ["🗓️ Planeación", "🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
 )
 
 # ─────────────────────────── Conexión con Instagram y TikTok ───────────────────────────
@@ -124,6 +125,10 @@ def _publicar(i: int, hecho: dict, texto_ig: str, texto_tt: str, en_ig: bool, en
         ok = ("instagram" in resultado or not en_ig) and ("tiktok" in resultado or not en_tt)
         estado.update(label="Publicado" if ok else "Revisa los avisos", state="complete" if ok else "error")
 
+
+# ─────────────────────────── Planeación ───────────────────────────
+with tab_plan:
+    planeacion_ui.mostrar()
 
 # ─────────────────────────── Clips del episodio ───────────────────────────
 with tab_clips:

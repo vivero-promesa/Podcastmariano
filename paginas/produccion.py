@@ -9,7 +9,7 @@ import json
 import os
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -18,6 +18,7 @@ import streamlit as st
 import config
 from agents import historial as hist
 from agents import borrador
+from agents import planeacion
 from agents.enfoques import proponer_enfoques, puntos_tratados
 from agents.investigator import investigar
 from agents.narrador import generar_audio
@@ -194,6 +195,33 @@ with st.expander("🆕 Buscar documentos nuevos del Papa y de la Santa Sede"):
 # ─────────────────────────── 1. Documento(s) y enfoque ───────────────────────────
 st.header("1. Documento(s) y enfoque")
 
+# ─────────── Lo que dice el calendario (Estudio de Redes → Planeación) ───────────
+if st.session_state.get("plan") is None:
+    try:
+        st.session_state.plan = planeacion.cargar()
+    except Exception:
+        st.session_state.plan = planeacion.plan_por_defecto()
+semana_plan = planeacion.semana_actual(st.session_state.plan)
+siguiente_plan = planeacion.siguiente_de(st.session_state.plan, semana_plan) if semana_plan else None
+
+
+def usar_plan_semana():
+    claves = [c for c in (semana_plan.get("documentos") or []) if c in por_clave]
+    st.session_state.docs_sel = claves
+    st.session_state.tema_input = semana_plan.get("enfoque", "")
+    st.session_state.enfoques = None
+
+
+if semana_plan:
+    with st.container(border=True):
+        nombres = " + ".join(por_clave[c]["titulo"] for c in semana_plan.get("documentos") or [] if c in por_clave)
+        st.markdown(
+            f"🗓️ **Según el calendario, el viernes {date.fromisoformat(semana_plan['fecha']):%d/%m/%Y} toca:** "
+            f"{semana_plan['serie']} {semana_plan.get('parte', '')} — *{semana_plan.get('enfoque') or 'enfoque por definir'}*"
+            + (f" ({nombres})" if nombres else " (tema libre)")
+        )
+        st.button("Usar el plan de esta semana", on_click=usar_plan_semana)
+
 tratadas = hist.claves_tratadas(historial)
 if "docs_sel" in st.session_state:
     st.session_state.docs_sel = [c for c in st.session_state.docs_sel if c in por_clave]
@@ -301,6 +329,14 @@ if st.session_state.get("ok_inv") and st.session_state.inv:
         "Indicaciones para el guion (opcional)",
         placeholder="Ej.: abre con la historia de una pareja que esperó 8 años.",
     )
+    # Avance del próximo episodio al cierre (para que quien escucha vuelva el viernes siguiente).
+    if siguiente_plan and siguiente_plan.get("enfoque"):
+        if st.checkbox(f"Anunciar al cierre el próximo episodio: «{siguiente_plan['enfoque']}»", value=True,
+                       key="anunciar_siguiente"):
+            indic_guion = (indic_guion + "\n\n" if indic_guion else "") + (
+                "AL CIERRE, antes de la despedida, anuncia en una o dos frases el episodio del próximo viernes: "
+                f"«{siguiente_plan['enfoque']}». Despierta curiosidad sin adelantar la respuesta."
+            )
     if st.button("✍️ Escribir guion y revisarlo", type="primary"):
         reiniciar("guion")
         correr_guion(tema, duracion, indic_guion)
