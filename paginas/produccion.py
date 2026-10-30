@@ -3,11 +3,14 @@
 Flujo semanal: Documento(s) → Enfoque → Investigación (texto oficial) → Censor → tu aprobación →
 Guion → Censor del guion → tu aprobación → Paquete de publicación → Historial (+ voz IA opcional).
 """
+import hashlib
 import io
 import json
 import os
 import tempfile
 import zipfile
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -28,9 +31,25 @@ CLAVES = ["inv", "rev_inv", "ok_inv", "guion", "rev_guion", "ok_guion", "paquete
 MAX_DOCUMENTOS = 3
 
 
+EDITOR_GUION = "editor_guion"  # clave del cuadro de texto editable del guion
+
+
 def reiniciar(desde: str = "inv"):
-    for k in CLAVES[CLAVES.index(desde):]:
+    borrar = CLAVES[CLAVES.index(desde):]
+    for k in borrar:
         st.session_state.pop(k, None)
+    if "guion" in borrar:
+        st.session_state.pop(EDITOR_GUION, None)
+
+
+def poner_guion(texto: str):
+    """Guion nuevo o corregido: lo guarda y lo pone en el cuadro editable (que antes conservaba el texto viejo)."""
+    st.session_state.guion = texto
+    st.session_state[EDITOR_GUION] = texto
+
+
+def huella(texto: str) -> str:
+    return hashlib.sha1((texto or "").encode("utf-8")).hexdigest()
 
 
 for k in ("inv", "rev_inv", "guion", "rev_guion", "paquete", "voz", "guardado", "enfoques", "novedades"):
@@ -126,7 +145,8 @@ def correr_guion(tema, duracion, indicaciones, correcciones="", guion_anterior=N
         rev = revisar(guion, "guion", st.session_state.inv["fuente_texto"])
         estado.update(label=f"Guion listo · Censor: {rev.veredicto}", state="complete", expanded=False)
     reiniciar("ok_guion")
-    st.session_state.guion, st.session_state.rev_guion = guion, rev
+    poner_guion(guion)
+    st.session_state.rev_guion = rev
 
 
 historial = st.session_state.historial
@@ -298,9 +318,12 @@ if st.session_state.get("ok_inv") and st.session_state.inv:
 
         palabras = len(st.session_state.guion.split())
         st.caption(f"{palabras} palabras ≈ {palabras // 140} minutos. Las partes entre [CLIP] y [/CLIP] son los momentos para redes.")
-        st.session_state.guion = st.text_area(
-            "Guion (editable: tu palabra es la final)", value=st.session_state.guion, height=420
-        )
+        # El cuadro tiene clave propia: muestra siempre el último guion (también el corregido por el
+        # Censor) y todo lo que escribas en él es lo que usan el paquete, el .zip y la voz IA.
+        if st.session_state.get(EDITOR_GUION) is None:
+            st.session_state[EDITOR_GUION] = st.session_state.guion
+        st.text_area("Guion (editable: tu palabra es la final)", key=EDITOR_GUION, height=420)
+        st.session_state.guion = st.session_state[EDITOR_GUION]
         if rev_g.veredicto == "RECHAZADO":
             st.error("Guion rechazado por el Censor. Aplica las correcciones antes de seguir.")
         casilla_aprobacion(rev_g, "Apruebo el guion para grabar (Directora)", "ok_guion")
@@ -357,15 +380,26 @@ if st.session_state.get("ok_guion") and st.session_state.guion:
 
         st.subheader("Voz IA (opcional)")
         st.caption("Para escuchar el guion antes de grabar. El episodio se graba con tu voz.")
-        if st.button("🗣️ Generar lectura con voz IA"):
-            with st.status("Generando la lectura…", expanded=False):
+        guion_actual = st.session_state.guion
+        voz = st.session_state.voz
+        # Una lectura hecha con una versión anterior del guion no se vuelve a mostrar.
+        if voz and voz.get("huella") != huella(guion_actual):
+            st.session_state.voz = voz = None
+            st.warning("El guion cambió después de la última lectura: genera la lectura otra vez para escuchar la versión corregida.")
+        if st.button("🗣️ Generar lectura con voz IA (guion actual)"):
+            with st.status("Generando la lectura del guion actual…", expanded=False):
                 ruta = os.path.join(tempfile.mkdtemp(), "lectura_guion.mp3")
-                st.session_state.voz = generar_audio(st.session_state.guion, ruta)
-        if st.session_state.voz:
-            if st.session_state.voz["success"]:
-                st.audio(st.session_state.voz["ruta"])
+                voz = generar_audio(guion_actual, ruta)
+                voz["huella"] = huella(guion_actual)
+                voz["palabras"] = len(guion_actual.split())
+                voz["hora"] = datetime.now(ZoneInfo("America/Bogota")).strftime("%I:%M %p")
+                st.session_state.voz = voz
+        if voz:
+            if voz["success"]:
+                st.caption(f"Lectura del guion actual ({voz['palabras']} palabras), generada a las {voz['hora']}.")
+                st.audio(voz["ruta"])
             else:
-                st.error(st.session_state.voz["error"])
+                st.error(voz["error"])
 
         st.info(
             "**Siguientes pasos:** 1) Graba el episodio con tu voz. "

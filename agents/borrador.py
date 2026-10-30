@@ -190,6 +190,8 @@ def restaurar(session_state, datos: dict):
             session_state[clave] = _de_json(valor)
         except Exception:
             pass
+    # El cuadro editable del guion muestra la versión recuperada.
+    session_state["editor_guion"] = session_state.get("guion")
     session_state["_borrador"] = None
 
 
