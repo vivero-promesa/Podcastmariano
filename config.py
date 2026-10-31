@@ -45,8 +45,10 @@ MODELO_IMAGEN = _secreto("GEMINI_MODELO_IMAGEN", "gemini-2.5-flash-image,gemini-
 # ─────────────────────────────────────────────────────────────
 # Publicación directa en redes (opcional; sin estas claves la app usa el modo manual)
 # ─────────────────────────────────────────────────────────────
-# Instagram: token de la «API de Instagram con inicio de sesión de Instagram» (no usa Facebook).
+# Instagram: token «IGAA…» (inicio de sesión de Instagram) o token de usuario del sistema «EAA…»
+# (inicio de sesión unificado). Con «EAA…» hace falta INSTAGRAM_USER_ID, el ID de la cuenta de Instagram.
 INSTAGRAM_TOKEN = _secreto("INSTAGRAM_TOKEN")
+INSTAGRAM_USER_ID = _secreto("INSTAGRAM_USER_ID")
 INSTAGRAM_API_VERSION = _secreto("INSTAGRAM_API_VERSION", "v23.0")
 # TikTok: app de TikTok for Developers con Content Posting API.
 TIKTOK_CLIENT_KEY = _secreto("TIKTOK_CLIENT_KEY")

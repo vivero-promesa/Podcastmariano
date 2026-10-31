@@ -119,7 +119,7 @@ python main.py
 | `GEMINI_MODEL` | Opcional, por defecto `gemini-3.8-flash` | — |
 | `VOZ_IA` | Opcional, por defecto `es-CO-SalomeNeural` | — |
 | `GEMINI_MODELO_IMAGEN` | Opcional: modelos de Gemini para imágenes, separados por comas. Si no responden, la app busca uno disponible | — |
-| `INSTAGRAM_TOKEN` | Botón Publicar: Instagram | Ver «Publicar desde la app» |
+| `INSTAGRAM_TOKEN` / `INSTAGRAM_USER_ID` | Botón Publicar: Instagram (el ID solo con token `EAA…`) | Ver «Publicar desde la app» |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` / `TIKTOK_REDIRECT_URI` / `TIKTOK_REFRESH_TOKEN` / `TIKTOK_MODO` | Botón Publicar: TikTok | Ver «Publicar desde la app» |
 | `GITHUB_REPO` / `GITHUB_BRANCH` | Opcionales, por defecto `vivero-promesa/Podcastmariano` y `main` | — |
 
@@ -139,7 +139,14 @@ Usa la «API de Instagram con inicio de sesión de Instagram». Requisitos: la c
 INSTAGRAM_TOKEN = "IGAA…"
 ```
 
-El token dura **60 días**. Antes de que venza, en la app usa **🔌 Conexión → 🔄 Renovar token** y pega el nuevo en los Secrets.
+**Si Meta solo te deja el «inicio de sesión unificado»** (apps nuevas): crea la configuración en Casos de uso → API de Instagram, genera un token de usuario del sistema (empieza por `EAA…`, no vence) y agrega también el ID de la cuenta de Instagram:
+
+```toml
+INSTAGRAM_TOKEN = "EAA…"
+INSTAGRAM_USER_ID = "123456789"
+```
+
+El token `IGAA…` dura **60 días**. Antes de que venza, en la app usa **🔌 Conexión → 🔄 Renovar token** y pega el nuevo en los Secrets.
 
 Cómo publica: Instagram descarga el video desde una dirección pública, así que la app lo sube un momento a `litterbox.catbox.moe` (se borra solo en 1 hora), crea el Reel, espera a que Instagram lo procese y lo publica. Si marcas **Reel de prueba** y tu cuenta lo admite, se muestra primero a quien aún no te sigue.
 
