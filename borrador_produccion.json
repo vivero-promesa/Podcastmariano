@@ -1,5 +1,5 @@
 {
-  "fecha": "05/11/2026 12:34 PM",
+  "fecha": "05/11/2026 12:47 PM",
   "resumen": "¿La FIV es pecado?  clonacion — llegaste hasta: investigación",
   "estado": {
     "docs_sel": [
@@ -41,6 +41,6 @@
         ]
       }
     },
-    "ok_inv": false
+    "ok_inv": true
   }
 }
