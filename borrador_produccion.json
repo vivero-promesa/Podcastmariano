@@ -1,6 +1,6 @@
 {
-  "fecha": "05/11/2026 05:52 PM",
-  "resumen": "¿La FIV es pecado?  clonacion — llegaste hasta: guion",
+  "fecha": "05/11/2026 05:54 PM",
+  "resumen": "¿La FIV es pecado?  clonacion — llegaste hasta: paquete de publicación",
   "estado": {
     "docs_sel": [
       "DV"
@@ -64,6 +64,44 @@
         ]
       }
     },
-    "ok_guion": true
+    "ok_guion": true,
+    "paquete": {
+      "__modelo__": "agents.publicacion:PaqueteEpisodio",
+      "datos": {
+        "titulos": [
+          "¿La FIV es pecado? Lo que dice la Iglesia | Donum Vitae",
+          "Infertilidad y fecundación in vitro: ¿es pecado? | Donum Vitae",
+          "Embriones congelados y la FIV: lo que enseña | Donum Vitae"
+        ],
+        "descripcion": "La maternidad no siempre tiene cuna; a veces tiene cruz. En este episodio abordamos con el corazón abierto y sin juicios uno de los temas más delicados de la bioética actual: la fecundación in vitro, la infertilidad y los límites morales de la ciencia ante la vida humana. Guiados por el documento Donum Vitae de 1987, reflexionamos sobre la dignidad insustituible del embrión, el dolor invisible de los embriones remanentes y la dolorosa comparación entre la FIV y la clonación.\n\nAnalizamos por qué la Iglesia católica enseña que la concepción debe nacer de la entrega corporal de los esposos y no de laboratorios o técnicas que dominan el origen de la persona. Además, enviamos un mensaje profundamente reconfortante y lleno de misericordia para aquellos padres que ya tienen hijos nacidos mediante estos métodos o que cargan con el peso de una prueba negativa.\n\nFinalmente, descubrimos la visión profética de la Iglesia al advertir sobre la clonación y los úteros artificiales desde los años ochenta, ofreciendo un camino de esperanza y fecundidad espiritual para todos los matrimonios que enfrentan la cruz de la infertilidad en México, Colombia y el mundo.",
+        "palabras_clave": [
+          "FIV",
+          "fecundación in vitro",
+          "in vitro",
+          "¿es pecado?",
+          "infertilidad",
+          "Iglesia católica",
+          "embriones congelados",
+          "Donum Vitae"
+        ],
+        "hashtags_instagram": [
+          "#CatolicosMexico",
+          "#CatolicosColombia",
+          "#FecundacionInVitro",
+          "#InfertilidadCatolica",
+          "#DonumVitae",
+          "#MaternidadCatolica",
+          "#BioeticaCatolica",
+          "#IglesiaCatolica"
+        ],
+        "hashtags_tiktok": [
+          "#FIV",
+          "#Catolicos",
+          "#Maternidad"
+        ],
+        "texto_portada": "¿La FIV es pecado?",
+        "prompt_portada": "photorealistic Catholic editorial style, soft divine light, warm vs cold contrast, subtle cross or Creation of Adam reference, no text, 1:1"
+      }
+    }
   }
 }
