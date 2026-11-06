@@ -32,7 +32,7 @@ Cada tarea se hace en un solo lugar. Los enfoques, la investigación, el guion, 
 | Lunes | Documento(s), enfoque, investigación, guion, las dos aprobaciones y guardar en el historial | Estudio de producción |
 | Martes | Grabar con tu voz | Tu micrófono |
 | Miércoles | Clips y capítulos; eliges los 3 mejores | Estudio de Redes |
-| Jueves | Portada y programar los 3 clips para viernes, lunes y miércoles a las 7:00 p. m. (unos 45 min) | Instagram y TikTok Studio |
+| Jueves | Dejar los 3 clips listos para viernes, lunes y miércoles a las 7:00 p. m. | Instagram: botón 📅 de la app (sale solo). TikTok: TikTok Studio |
 | Viernes | Publicar en Spotify (6:00 a. m.) y poner el enlace del episodio en las bios | Spotify for Creators, Instagram, TikTok |
 | Fin de semana | Responder comentarios | Instagram, TikTok, Spotify |
 
@@ -122,6 +122,12 @@ python main.py
 | `INSTAGRAM_TOKEN` / `INSTAGRAM_USER_ID` | Botón Publicar: Instagram (el ID solo con token `EAA…`) | Ver «Publicar desde la app» |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` / `TIKTOK_REDIRECT_URI` / `TIKTOK_REFRESH_TOKEN` / `TIKTOK_MODO` | Botón Publicar: TikTok | Ver «Publicar desde la app» |
 | `GITHUB_REPO` / `GITHUB_BRANCH` | Opcionales, por defecto `vivero-promesa/Podcastmariano` y `main` | — |
+
+## Instagram automático
+
+El botón 📅 **Programar en Instagram** guarda el clip en una cola y GitHub Actions lo publica a su hora, aunque la app esté dormida. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
+
+La tarea corre viernes, lunes y miércoles desde las 7:05 p. m. y reintenta durante la noche. Si algo falla, GitHub avisa por correo y la app muestra el error. TikTok no permite este automático para apps propias: los clips se programan el jueves en TikTok Studio.
 
 ## Publicar desde la app (Instagram y TikTok)
 
