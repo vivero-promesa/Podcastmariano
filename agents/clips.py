@@ -69,6 +69,9 @@ Escucha completo este episodio de «{config.PODCAST['nombre']}».
    Criterios virales: frase que detiene el scroll en los primeros 3 segundos, se entiende sin contexto,
    genera emoción o debate, responde una pregunta que la gente busca ({", ".join(config.PALABRAS_BUSQUEDA[:6])}).
    El clip debe empezar al inicio de una frase y terminar al final de una idea.
+   Ordena los clips así, si el episodio lo permite: clip 1 = una pregunta real que la gente busca;
+   clip 2 = lo que dice la Iglesia, con una cita explicada con palabras de a pie;
+   clip 3 = esperanza y acompañamiento para quien vive la infertilidad.
 2. Escribe los capítulos del episodio para la descripción de Spotify.
 Usa marcas de tiempo exactas del audio. Tono: verdad con ternura, nunca condena.
 3. Para cada clip escribe prompt_imagen: una escena fotorrealista en inglés, estilo editorial católico
