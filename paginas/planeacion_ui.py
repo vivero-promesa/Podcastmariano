@@ -57,7 +57,7 @@ def mostrar():
     st.subheader("🗓️ Planeación del podcast y las redes")
     st.caption(
         "Un episodio cada viernes, agrupados en series de 4. Cada semana, 3 clips (uno por pilar), "
-        f"el mismo archivo en Instagram y TikTok, programados el jueves para las {plan_mod.HORA_CLIPS}."
+        f"el mismo archivo en Instagram y TikTok, programados el jueves para las {plan_mod.HORA_CLIPS}"
     )
 
     # ── Esta semana ──
@@ -86,7 +86,7 @@ def mostrar():
                 for c in plan_mod.clips_de_semana(actual)
             ]
             st.dataframe(pd.DataFrame(filas_jueves), hide_index=True, width="stretch")
-            st.caption(f"Episodio en Spotify: viernes {_fecha_bonita(actual['fecha'])}, {plan_mod.HORA_SPOTIFY}.")
+            st.caption(f"Episodio en Spotify: viernes {_fecha_bonita(actual['fecha'])}, {plan_mod.HORA_SPOTIFY}")
     else:
         st.info("El calendario no tiene semanas próximas. Agrega semanas en «Calendario».")
 
@@ -286,7 +286,7 @@ def mostrar():
             "siguiente.\n\n"
             "**Ritmo semanal**\n"
             f"- Viernes: episodio en Spotify ({plan_mod.HORA_SPOTIFY}) + clip 1 ({plan_mod.HORA_CLIPS}).\n"
-            f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS}. Los 3 se programan el jueves anterior.\n"
+            f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS} Los 3 se programan el jueves anterior.\n"
             "- El mismo archivo va a Instagram (prioridad) y TikTok. Sin carruseles ni Historias diarias.\n\n"
             "**Los 3 pilares (un clip de cada uno por semana)**"
         )
