@@ -133,6 +133,7 @@ with tab_plan:
 # ─────────────────────────── Clips del episodio ───────────────────────────
 with tab_clips:
     st.subheader("Del episodio grabado a 3 videos verticales")
+    _panel_conexiones()
     c1, c2 = st.columns([2, 1])
     with c1:
         audio_subido = st.file_uploader("Audio del episodio", type=["mp3", "m4a", "wav", "aac", "ogg"])
@@ -228,8 +229,6 @@ with tab_clips:
                 except Exception as e:
                     st.session_state.producidos[i] = {"error": str(e)}
             barra.progress(1.0, text="Videos listos")
-
-        _panel_conexiones()
 
         for i, clip in enumerate(analisis.clips):
             with st.expander(f"Clip {i + 1} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
