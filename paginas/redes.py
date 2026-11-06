@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 import config
-from agents import llm, video
+from agents import cola, llm, video
 from agents import publicar_redes as pub
 from agents.carrusel import crear_carrusel
 from agents.carrusel_imagenes import crear_imagenes, zip_imagenes
@@ -119,6 +119,30 @@ def _guardar_estado_clip(i: int, estado: str):
         plan_mod.guardar(plan, f"Planeación: clip {i + 1} {estado.lower()} ({semana['fecha']})")
     except Exception as e:
         st.warning(f"No pude guardar el estado del clip: {e}")
+
+
+def _cola_actual() -> dict:
+    """La cola por id de clip. Se guarda en la sesión para no consultarla en cada clic."""
+    if st.session_state.get("cola_ig") is None:
+        try:
+            st.session_state.cola_ig = {c["id"]: c for c in cola.leer()[0].get("clips", [])}
+        except Exception as e:
+            st.warning(f"No pude leer la cola de Instagram: {e}")
+            return {}
+    return st.session_state.cola_ig
+
+
+def _programar_instagram(i: int, hecho: dict, agenda: dict, semana: dict, texto: str):
+    with st.spinner(f"Dejando listo el clip {i + 1}…"):
+        try:
+            cola.programar(semana["fecha"], agenda["clip"], agenda["pilar"], agenda["fecha"],
+                           hecho["mp4"], hecho.get("portada"), texto)
+        except Exception as e:
+            st.error(f"Clip {i + 1}: {e}")
+            return False
+    st.session_state.cola_ig = None
+    _guardar_estado_clip(i, "Programado")
+    return True
 
 
 def _publicar(i: int, hecho: dict, texto_ig: str, texto_tt: str, en_ig: bool, en_tt: bool, prueba: bool):
@@ -259,7 +283,7 @@ with tab_clips:
         if semana_clips:
             st.info(
                 f"Estos clips son de la semana del viernes {planeacion_ui._fecha_bonita(semana_clips['fecha'])}. "
-                f"**Programar** se hace en Instagram y TikTok Studio; el botón 🚀 publica en este momento."
+                f"Instagram: 📅 lo deja listo y sale solo a su hora. TikTok: prográmalo en TikTok Studio. El botón 🚀 publica en este momento."
             )
 
         for i, clip in enumerate(analisis.clips):
@@ -271,11 +295,7 @@ with tab_clips:
                         f"**Pilar: {agenda['pilar']}** · Sale: {agenda['dia']} {planeacion_ui._fecha_bonita(agenda['fecha'])}, {agenda['hora']} · "
                         f"Estado: {agenda['estado']}"
                     )
-                    if agenda["estado"] == "Por hacer" and st.button(
-                        "✅ Ya lo programé en Instagram y TikTok", key=f"programado_{i}"
-                    ):
-                        _guardar_estado_clip(i, "Programado")
-                        st.rerun()
+                    st.caption(f"TikTok: {'Programado' if agenda['tiktok'] else 'Por hacer'}")
                 else:
                     st.caption("Clip extra: no tiene día en el calendario de la semana.")
                 st.caption(f"Por qué funciona: {clip.por_que_funciona}")
@@ -370,6 +390,46 @@ with tab_clips:
                         texto_ig = st.text_area("Texto para Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
                         texto_tt = st.text_area("Texto para TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
 
+                        # ── 📅 Programar ──
+                        if agenda and semana_clips:
+                            st.markdown("**📅 Programar**")
+                            cid = cola.identificador(semana_clips["fecha"], agenda["clip"])
+                            en_cola = _cola_actual().get(cid)
+                            cuando = f"{agenda['dia']} {planeacion_ui._fecha_bonita(agenda['fecha'])}, {agenda['hora']}"
+                            if en_cola and en_cola["estado"] == "publicado":
+                                st.success(f"Instagram: publicado → {en_cola['enlace']}")
+                            elif en_cola and en_cola["estado"] == "publicando":
+                                st.warning("Instagram: se está publicando. Si no sale en un rato, revisa la cuenta antes de repetirlo.")
+                            elif en_cola and en_cola["estado"] == "pendiente":
+                                st.success(f"Instagram: listo, sale solo. {cuando}")
+                                if en_cola.get("error"):
+                                    st.warning(f"El último intento falló y se reintentará: {en_cola['error']}")
+                                if st.button("Cancelar en Instagram", key=f"cancelar_{i}"):
+                                    try:
+                                        cola.cancelar(cid)
+                                        st.session_state.cola_ig = None
+                                        _guardar_estado_clip(i, "Por hacer")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(str(e))
+                            else:
+                                if en_cola and en_cola["estado"] == "error":
+                                    st.error(f"Instagram no pudo publicarlo: {en_cola['error']}")
+                                if st.button(f"📅 Programar en Instagram ({cuando})", key=f"cola_{i}", type="primary",
+                                             disabled=not pub.instagram_configurado()):
+                                    if _programar_instagram(i, hecho, agenda, semana_clips, texto_ig):
+                                        st.rerun()
+                            t1, t2 = st.columns(2)
+                            t1.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"studio_{i}")
+                            if not agenda["tiktok"] and t2.button("✅ Ya lo programé en TikTok", key=f"tt_listo_{i}"):
+                                _plan, _semana = _plan_de_clips()
+                                plan_mod.marcar_tiktok(_semana, i)
+                                try:
+                                    plan_mod.guardar(_plan, f"Planeación: clip {i + 1} programado en TikTok")
+                                except Exception as e:
+                                    st.warning(f"No pude guardarlo: {e}")
+                                st.rerun()
+
                         # ── 🚀 Publicar ──
                         st.markdown("**🚀 Publicar**")
                         hay_ig, hay_tt = pub.instagram_configurado(), pub.tiktok_configurado()
@@ -407,6 +467,22 @@ with tab_clips:
                         st.caption(f"Enlace del episodio para la bio → {textos['enlace']}")
 
         listos = {i: d for i, d in st.session_state.producidos.items() if d and not d.get("error")}
+        por_programar = {
+            i: d for i, d in listos.items() if semana_clips and i < len(calendario_clips)
+            and _cola_actual().get(cola.identificador(semana_clips["fecha"], calendario_clips[i]["clip"]), {}).get("estado")
+            not in ("pendiente", "publicando", "publicado")
+        }
+        if por_programar and pub.instagram_configurado() and st.button(
+            f"📅 Programar en Instagram los {len(por_programar)} clips listos", type="primary"
+        ):
+            hechos = [
+                _programar_instagram(i, d, calendario_clips[i], semana_clips,
+                                     st.session_state.get(f"ig_{i}", textos_clip(analisis.clips[i], enlace_ep)["instagram"]))
+                for i, d in por_programar.items()
+            ]
+            if all(hechos):
+                st.rerun()
+
         if listos:
             buffer = io.BytesIO()
             with zipfile.ZipFile(buffer, "w") as z:

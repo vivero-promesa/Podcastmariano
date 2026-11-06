@@ -27,6 +27,7 @@ ESTADOS_CLIP = ["Por hacer", "Programado", "Publicado"]
 # Horario único del podcast: lo usan la app y el mensaje de los jueves. Si cambia, se cambia aquí.
 HORA_SPOTIFY = "6:00 a. m."
 HORA_CLIPS = "7:00 p. m."
+HORA_CLIPS_24 = (19, 0)  # La tarea .github/workflows/publicar-instagram.yml debe coincidir.
 
 # Primer viernes del calendario inicial. Es fijo para que las fechas no se corran.
 INICIO_CALENDARIO = date(2026, 11, 6)
@@ -72,7 +73,7 @@ LISTA_VIERNES = [
     "Episodio subido a Spotify for Creators con título y descripción de la app",
     "Capítulos con minutos agregados a la descripción de Spotify",
     "Enlace de la bio de Instagram y TikTok cambiado al episodio nuevo",
-    "Los 3 clips programados el jueves en Instagram y TikTok: viernes, lunes y miércoles a las 7:00 p. m.",
+    "Los 3 clips programados el jueves: Instagram desde la app y TikTok en TikTok Studio",
     "Episodio guardado en el historial de la app",
     "Responder comentarios del fin de semana",
 ]
@@ -242,6 +243,7 @@ def clips_de_semana(semana: dict) -> List[dict]:
     viernes = date.fromisoformat(semana["fecha"])
     ganchos = semana.get("clips") or []
     estados = semana.get("clips_estado") or []
+    tiktok = semana.get("clips_tiktok") or []
     salida = []
     for i, p in enumerate(PILARES):
         estado = estados[i] if i < len(estados) else ESTADOS_CLIP[0]
@@ -253,6 +255,7 @@ def clips_de_semana(semana: dict) -> List[dict]:
             "hora": HORA_CLIPS,
             "gancho": ganchos[i] if i < len(ganchos) else "",
             "estado": estado if estado in ESTADOS_CLIP else ESTADOS_CLIP[0],
+            "tiktok": bool(tiktok[i]) if i < len(tiktok) else False,
         })
     return salida
 
@@ -263,6 +266,14 @@ def marcar_clip(semana: dict, indice: int, estado: str) -> None:
     if 0 <= indice < len(estados):
         estados[indice] = estado
         semana["clips_estado"] = estados
+
+
+def marcar_tiktok(semana: dict, indice: int, listo: bool = True) -> None:
+    """Anota que el clip ya quedó programado en TikTok Studio."""
+    marcas = [c["tiktok"] for c in clips_de_semana(semana)]
+    if 0 <= indice < len(marcas):
+        marcas[indice] = listo
+        semana["clips_tiktok"] = marcas
 
 
 def agregar_semana(plan: dict) -> dict:

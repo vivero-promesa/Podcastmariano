@@ -1,0 +1,32 @@
+# Publica los Reels de la cola. Horario: viernes, lunes y miércoles desde las 7:05 p. m. de Colombia.
+# GitHub usa hora UTC (Colombia + 5): por eso sábado, martes y jueves a las 00:05 UTC.
+# Corre varias veces en la noche porque GitHub puede atrasar o saltarse una ejecución.
+name: Publicar en Instagram
+
+on:
+  schedule:
+    - cron: "5,25,45 0-3 * * 2,4,6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar-instagram
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "requests>=2.31"
+      - run: python publicar_cola.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
