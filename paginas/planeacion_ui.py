@@ -57,7 +57,7 @@ def mostrar():
     st.subheader("🗓️ Planeación del podcast y las redes")
     st.caption(
         "Un episodio cada viernes, agrupados en series de 4. Cada semana, 3 clips (uno por pilar), "
-        "el mismo archivo en Instagram, TikTok y YouTube Shorts, programados el jueves."
+        f"el mismo archivo en Instagram y TikTok, programados el jueves para las {plan_mod.HORA_CLIPS}"
     )
 
     # ── Esta semana ──
@@ -77,7 +77,16 @@ def mostrar():
                     st.caption(f"Avance para el cierre del episodio: «El próximo viernes: {siguiente['enfoque']}».")
             c2.metric("Estado", actual.get("estado", "Por producir"))
             jueves = date.fromisoformat(actual["fecha"]) - timedelta(days=1)
-            st.caption(f"Programar los 3 clips: jueves {_fecha_bonita(jueves.isoformat())}.")
+            st.markdown(f"**Tu jueves {_fecha_bonita(jueves.isoformat())}: programa estos 3 clips**")
+            filas_jueves = [
+                {
+                    "Clip": c["clip"], "Pilar": c["pilar"], "Sale": f"{c['dia']} {_fecha_bonita(c['fecha'])}",
+                    "Hora": c["hora"], "Estado": c["estado"],
+                }
+                for c in plan_mod.clips_de_semana(actual)
+            ]
+            st.dataframe(pd.DataFrame(filas_jueves), hide_index=True, width="stretch")
+            st.caption(f"Episodio en Spotify: viernes {_fecha_bonita(actual['fecha'])}, {plan_mod.HORA_SPOTIFY}")
     else:
         st.info("El calendario no tiene semanas próximas. Agrega semanas en «Calendario».")
 
@@ -156,18 +165,28 @@ def mostrar():
             st.markdown(f"**{semana['serie']} {semana.get('parte', '')} — {semana['enfoque'] or 'enfoque por definir'}**")
             st.caption("Los 3 momentos salen de los [CLIP] del guion aprobado y del Estudio de Redes (pestaña Clips).")
             clips = semana.get("clips") or [""] * len(plan_mod.PILARES)
+            detalle = plan_mod.clips_de_semana(semana)
             nuevos = []
+            nuevos_estados = []
             for i, p in enumerate(plan_mod.PILARES):
                 with st.container(border=True):
                     a, b = st.columns([1, 2])
-                    a.markdown(f"**Clip {p['clip']} · {p['pilar']}**  \nPublica: {p['dia']}")
+                    a.markdown(
+                        f"**Clip {p['clip']} · {p['pilar']}**  \n"
+                        f"Sale: {p['dia']} {_fecha_bonita(detalle[i]['fecha'])}, {detalle[i]['hora']}"
+                    )
                     a.caption(p["objetivo"])
+                    nuevos_estados.append(a.selectbox(
+                        "Estado", plan_mod.ESTADOS_CLIP, index=plan_mod.ESTADOS_CLIP.index(detalle[i]["estado"]),
+                        key=f"estado_plan_{elegida}_{i}",
+                    ))
                     nuevos.append(b.text_area(
                         "Momento o gancho del clip", value=clips[i] if i < len(clips) else "",
                         placeholder=f"Ejemplo: {p['ejemplo']}", key=f"clip_plan_{elegida}_{i}", height=80,
                     ))
             if st.button("💾 Guardar plan de clips", type="primary"):
                 semana["clips"] = nuevos
+                semana["clips_estado"] = nuevos_estados
                 _guardar(f"Planeación: clips del {elegida}")
 
     # ── Lista del viernes ──
@@ -266,13 +285,13 @@ def mostrar():
             "**Objetivo:** que las redes lleven gente al episodio de Spotify y que quien escucha vuelva el viernes "
             "siguiente.\n\n"
             "**Ritmo semanal**\n"
-            "- Viernes: episodio en Spotify + clip 1.\n"
-            "- Lunes: clip 2 · Miércoles: clip 3. Los 3 se programan el jueves anterior.\n"
-            "- El mismo archivo va a Instagram (prioridad), TikTok y YouTube Shorts. Sin carruseles ni Historias diarias.\n\n"
+            f"- Viernes: episodio en Spotify ({plan_mod.HORA_SPOTIFY}) + clip 1 ({plan_mod.HORA_CLIPS}).\n"
+            f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS} Los 3 se programan el jueves anterior.\n"
+            "- El mismo archivo va a Instagram (prioridad) y TikTok. Sin carruseles ni Historias diarias.\n\n"
             "**Los 3 pilares (un clip de cada uno por semana)**"
         )
         st.dataframe(
-            pd.DataFrame([{"Clip": p["clip"], "Pilar": p["pilar"], "Día": p["dia"], "Para qué": p["objetivo"],
+            pd.DataFrame([{"Clip": p["clip"], "Pilar": p["pilar"], "Día": p["dia"], "Hora": plan_mod.HORA_CLIPS, "Para qué": p["objetivo"],
                            "Ejemplo": p["ejemplo"]} for p in plan_mod.PILARES]),
             hide_index=True, width="stretch",
         )

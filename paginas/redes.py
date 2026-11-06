@@ -16,6 +16,7 @@ from agents.carrusel_imagenes import crear_imagenes, zip_imagenes
 from agents.imagenes import generar_imagen
 from agents.clips import a_segundos, analizar_episodio, producir_clip, textos_clip
 from agents.narrador import generar_audio
+from agents import planeacion as plan_mod
 from agents.publicacion import hashtags_instagram_finales, mejorar_titulos
 from paginas.comun import exigir_clave
 from paginas import planeacion_ui
@@ -100,6 +101,26 @@ def _panel_conexiones():
             st.code(cambio, language=None)
 
 
+def _plan_de_clips():
+    """El plan y la semana a la que pertenecen estos clips (la próxima del calendario)."""
+    if st.session_state.get("plan") is None:
+        st.session_state.plan = plan_mod.cargar()
+    plan = st.session_state.plan
+    return plan, plan_mod.semana_actual(plan)
+
+
+def _guardar_estado_clip(i: int, estado: str):
+    """Guarda el estado del clip en el calendario. Sin semana o sin pilar no hace nada."""
+    plan, semana = _plan_de_clips()
+    if not semana or i >= len(plan_mod.PILARES):
+        return
+    plan_mod.marcar_clip(semana, i, estado)
+    try:
+        plan_mod.guardar(plan, f"Planeación: clip {i + 1} {estado.lower()} ({semana['fecha']})")
+    except Exception as e:
+        st.warning(f"No pude guardar el estado del clip: {e}")
+
+
 def _publicar(i: int, hecho: dict, texto_ig: str, texto_tt: str, en_ig: bool, en_tt: bool, prueba: bool):
     resultado = st.session_state.publicados.setdefault(i, {})
     with st.status("Publicando…", expanded=True) as estado:
@@ -124,6 +145,9 @@ def _publicar(i: int, hecho: dict, texto_ig: str, texto_tt: str, en_ig: bool, en
                 st.error(str(e))
         ok = ("instagram" in resultado or not en_ig) and ("tiktok" in resultado or not en_tt)
         estado.update(label="Publicado" if ok else "Revisa los avisos", state="complete" if ok else "error")
+    # En modo borrador, TikTok solo deja el video en la bandeja: eso todavía no es «Publicado».
+    if ok and (en_ig or resultado.get("tiktok", {}).get("modo") == "directo"):
+        _guardar_estado_clip(i, "Publicado")
 
 
 # ─────────────────────────── Planeación ───────────────────────────
@@ -230,8 +254,30 @@ with tab_clips:
                     st.session_state.producidos[i] = {"error": str(e)}
             barra.progress(1.0, text="Videos listos")
 
+        _, semana_clips = _plan_de_clips()
+        calendario_clips = plan_mod.clips_de_semana(semana_clips) if semana_clips else []
+        if semana_clips:
+            st.info(
+                f"Estos clips son de la semana del viernes {planeacion_ui._fecha_bonita(semana_clips['fecha'])}. "
+                f"**Programar** se hace en Instagram y TikTok Studio; el botón 🚀 publica en este momento."
+            )
+
         for i, clip in enumerate(analisis.clips):
-            with st.expander(f"Clip {i + 1} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
+            agenda = calendario_clips[i] if i < len(calendario_clips) else None
+            titulo_agenda = f" · {agenda['dia']} {agenda['hora']}" if agenda else ""
+            with st.expander(f"Clip {i + 1}{titulo_agenda} · {clip.inicio}–{clip.fin} · {clip.gancho}", expanded=i == 0):
+                if agenda:
+                    st.markdown(
+                        f"**Pilar: {agenda['pilar']}** · Sale: {agenda['dia']} {planeacion_ui._fecha_bonita(agenda['fecha'])}, {agenda['hora']} · "
+                        f"Estado: {agenda['estado']}"
+                    )
+                    if agenda["estado"] == "Por hacer" and st.button(
+                        "✅ Ya lo programé en Instagram y TikTok", key=f"programado_{i}"
+                    ):
+                        _guardar_estado_clip(i, "Programado")
+                        st.rerun()
+                else:
+                    st.caption("Clip extra: no tiene día en el calendario de la semana.")
                 st.caption(f"Por qué funciona: {clip.por_que_funciona}")
 
                 # ── ✂️ Editar el clip ──
@@ -373,7 +419,9 @@ with tab_clips:
                     t = textos_clip(analisis.clips[i], enlace_ep)
                     ig = st.session_state.get(f"ig_{i}", t["instagram"])
                     tt = st.session_state.get(f"tt_{i}", t["tiktok"])
-                    z.writestr(f"clip_{i + 1}_textos.txt", f"INSTAGRAM\n{ig}\n\nTIKTOK\n{tt}\n")
+                    agenda = calendario_clips[i] if i < len(calendario_clips) else None
+                    cuando = f"PROGRAMAR: {agenda['dia']} {planeacion_ui._fecha_bonita(agenda['fecha'])}, {agenda['hora']} · {agenda['pilar']}\n\n" if agenda else ""
+                    z.writestr(f"clip_{i + 1}_textos.txt", f"{cuando}INSTAGRAM\n{ig}\n\nTIKTOK\n{tt}\n")
                 z.writestr("capitulos_spotify.txt", "\n".join(analisis.capitulos))
             st.download_button("⬇️ Descargar todos los clips (.zip)", buffer.getvalue(), file_name="clips.zip", mime="application/zip")
 

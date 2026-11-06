@@ -22,14 +22,23 @@ RAMA = "borradores"
 RUTA_LOCAL = os.path.join(tempfile.gettempdir(), ARCHIVO)
 
 ESTADOS = ["Por producir", "Investigación", "Guion listo", "Grabado", "Publicado"]
+ESTADOS_CLIP = ["Por hacer", "Programado", "Publicado"]
+
+# Horario único del podcast: lo usan la app y el mensaje de los jueves. Si cambia, se cambia aquí.
+HORA_SPOTIFY = "6:00 a. m."
+HORA_CLIPS = "7:00 p. m."
+
+# Primer viernes del calendario inicial. Es fijo para que las fechas no se corran.
+INICIO_CALENDARIO = date(2026, 11, 6)
 
 # Los 3 clips de cada semana: uno por pilar (modelo vigente: 3 clips, mismo archivo en
-# Instagram y TikTok, todos programados el jueves).
+# Instagram y TikTok, todos programados el jueves). «dias_despues»: días tras el viernes del episodio.
 PILARES = [
     {
         "clip": 1,
         "pilar": "Pregunta real",
-        "dia": "Viernes (con el episodio)",
+        "dia": "Viernes",
+        "dias_despues": 0,
         "objetivo": "Que te encuentren: responde lo que la gente escribe en el buscador.",
         "ejemplo": "«¿La FIV es pecado?»",
     },
@@ -37,6 +46,7 @@ PILARES = [
         "clip": 2,
         "pilar": "Lo que dice la Iglesia",
         "dia": "Lunes",
+        "dias_despues": 3,
         "objetivo": "Autoridad: una cita verificada explicada con palabras de a pie.",
         "ejemplo": "«El hijo es un don, no un derecho»",
     },
@@ -44,6 +54,7 @@ PILARES = [
         "clip": 3,
         "pilar": "Esperanza y acompañamiento",
         "dia": "Miércoles",
+        "dias_despues": 5,
         "objetivo": "Comunidad: ternura para quien vive la infertilidad e invitación a escuchar.",
         "ejemplo": "«Si llevas años esperando, esto es para ti»",
     },
@@ -61,8 +72,7 @@ LISTA_VIERNES = [
     "Episodio subido a Spotify for Creators con título y descripción de la app",
     "Capítulos con minutos agregados a la descripción de Spotify",
     "Enlace de la bio de Instagram y TikTok cambiado al episodio nuevo",
-    "Los 3 clips programados (jueves): viernes, lunes y miércoles",
-    "Mismos 3 clips subidos a YouTube Shorts",
+    "Los 3 clips programados el jueves en Instagram y TikTok: viernes, lunes y miércoles a las 7:00 p. m.",
     "Episodio guardado en el historial de la app",
     "Responder comentarios del fin de semana",
 ]
@@ -106,7 +116,7 @@ def _numerar_series(semanas: List[dict]) -> List[dict]:
 
 
 def plan_por_defecto(desde: Optional[date] = None) -> dict:
-    inicio = proximo_viernes(desde)
+    inicio = desde or INICIO_CALENDARIO
     semanas = []
     for i, (serie, docs, enfoque, invitado) in enumerate(_PLAN_BASE):
         semanas.append({
@@ -225,6 +235,34 @@ def siguiente_de(plan: dict, semana: dict) -> Optional[dict]:
         if s is semana or s.get("fecha") == semana.get("fecha"):
             return semanas[i + 1] if i + 1 < len(semanas) else None
     return None
+
+
+def clips_de_semana(semana: dict) -> List[dict]:
+    """Los 3 clips de una semana con su pilar, fecha, hora y estado."""
+    viernes = date.fromisoformat(semana["fecha"])
+    ganchos = semana.get("clips") or []
+    estados = semana.get("clips_estado") or []
+    salida = []
+    for i, p in enumerate(PILARES):
+        estado = estados[i] if i < len(estados) else ESTADOS_CLIP[0]
+        salida.append({
+            "clip": p["clip"],
+            "pilar": p["pilar"],
+            "dia": p["dia"],
+            "fecha": (viernes + timedelta(days=p["dias_despues"])).isoformat(),
+            "hora": HORA_CLIPS,
+            "gancho": ganchos[i] if i < len(ganchos) else "",
+            "estado": estado if estado in ESTADOS_CLIP else ESTADOS_CLIP[0],
+        })
+    return salida
+
+
+def marcar_clip(semana: dict, indice: int, estado: str) -> None:
+    """Cambia el estado de un clip de la semana (no toca los demás)."""
+    estados = [c["estado"] for c in clips_de_semana(semana)]
+    if 0 <= indice < len(estados):
+        estados[indice] = estado
+        semana["clips_estado"] = estados
 
 
 def agregar_semana(plan: dict) -> dict:
