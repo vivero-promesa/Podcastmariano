@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "semanas": [
+    {
+      "fecha": "2026-10-23",
+      "serie": "Episodio especial",
+      "documentos": [
+        "EV"
+      ],
+      "enfoque": "Evangelium Vitae (1995): ¿Buscar un hijo a cualquier precio es pecado?",
+      "invitado": false,
+      "estado": "Publicado",
+      "notas": "Publicado en Spotify el 23 oct 2026",
+      "parte": ""
+    },
+    {
+      "fecha": "2026-10-30",
+      "serie": "Episodio especial",
+      "documentos": [
+        "EV"
+      ],
+      "enfoque": "La cultura de la muerte",
+      "invitado": false,
+      "estado": "Publicado",
+      "notas": "Publicado en Spotify el 30 oct 2026",
+      "parte": ""
+    },
+    {
+      "fecha": "2026-11-06",
+      "serie": "Antes de la FIV: lo que nadie te explica",
+      "documentos": [
+        "DV"
+      ],
+      "enfoque": "¿La FIV es pecado? Lo que la Iglesia sí dice (y lo que no)",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "1/4"
+    },
+    {
+      "fecha": "2026-11-13",
+      "serie": "Antes de la FIV: lo que nadie te explica",
+      "documentos": [
+        "DP"
+      ],
+      "enfoque": "Embriones congelados: ¿qué pasa con ellos y qué puedo hacer?",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "2/4"
+    },
+    {
+      "fecha": "2026-11-20",
+      "serie": "Antes de la FIV: lo que nadie te explica",
+      "documentos": [
+        "CIC"
+      ],
+      "enfoque": "Infertilidad y FIV: lo que enseña el Catecismo",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "3/4"
+    },
+    {
+      "fecha": "2026-11-27",
+      "serie": "Antes de la FIV: lo que nadie te explica",
+      "documentos": [
+        "LIBRE"
+      ],
+      "enfoque": "Vientre de alquiler: ¿por qué la Iglesia dice no? (Dignitas Infinita)",
+      "invitado": true,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "4/4"
+    },
+    {
+      "fecha": "2026-12-04",
+      "serie": "El matrimonio abierto a la vida",
+      "documentos": [
+        "HV"
+      ],
+      "enfoque": "¿Los anticonceptivos son pecado? Humanae Vitae explicada",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "1/4"
+    },
+    {
+      "fecha": "2026-12-11",
+      "serie": "El matrimonio abierto a la vida",
+      "documentos": [
+        "FC"
+      ],
+      "enfoque": "La familia que no llega: ¿qué espera la Iglesia de una pareja infértil?",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "2/4"
+    },
+    {
+      "fecha": "2026-12-18",
+      "serie": "El matrimonio abierto a la vida",
+      "documentos": [
+        "GS"
+      ],
+      "enfoque": "¿Para qué es el matrimonio? Amor y apertura a la vida",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "3/4"
+    },
+    {
+      "fecha": "2026-12-25",
+      "serie": "El matrimonio abierto a la vida",
+      "documentos": [
+        "AL"
+      ],
+      "enfoque": "Navidad sin hijos: esperanza para las parejas que esperan",
+      "invitado": true,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "4/4"
+    },
+    {
+      "fecha": "2027-01-01",
+      "serie": "Ciencia, tecnología y dignidad",
+      "documentos": [
+        "CV"
+      ],
+      "enfoque": "¿Todo lo que la ciencia puede hacer, se debe hacer?",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "1/4"
+    },
+    {
+      "fecha": "2027-01-08",
+      "serie": "Ciencia, tecnología y dignidad",
+      "documentos": [
+        "LS"
+      ],
+      "enfoque": "Ecología humana: el cuerpo también es casa común",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "2/4"
+    },
+    {
+      "fecha": "2027-01-15",
+      "serie": "Ciencia, tecnología y dignidad",
+      "documentos": [
+        "VS"
+      ],
+      "enfoque": "¿Existe el bien y el mal objetivo en la fertilidad?",
+      "invitado": false,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "3/4"
+    },
+    {
+      "fecha": "2027-01-22",
+      "serie": "Ciencia, tecnología y dignidad",
+      "documentos": [
+        "MH"
+      ],
+      "enfoque": "Inteligencia artificial y dignidad humana: lo que dice León XIV",
+      "invitado": true,
+      "estado": "Por producir",
+      "notas": "",
+      "parte": "4/4"
+    }
+  ],
+  "metricas": [],
+  "ideas": [],
+  "lista_viernes": {}
+}
