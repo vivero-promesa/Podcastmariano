@@ -57,7 +57,7 @@ def mostrar():
     st.subheader("🗓️ Planeación del podcast y las redes")
     st.caption(
         "Un episodio cada viernes, agrupados en series de 4. Cada semana, 3 clips (uno por pilar), "
-        f"el mismo archivo en Instagram y TikTok, programados el jueves para las {plan_mod.HORA_CLIPS}"
+        f"el mismo archivo en Instagram y TikTok, para las {plan_mod.HORA_CLIPS} El jueves los dejas programados: Instagram sale solo desde la app y TikTok desde TikTok Studio."
     )
 
     # ── Esta semana ──
@@ -81,7 +81,7 @@ def mostrar():
             filas_jueves = [
                 {
                     "Clip": c["clip"], "Pilar": c["pilar"], "Sale": f"{c['dia']} {_fecha_bonita(c['fecha'])}",
-                    "Hora": c["hora"], "Estado": c["estado"],
+                    "Hora": c["hora"], "Instagram": c["estado"], "TikTok": "Programado" if c["tiktok"] else "Por hacer",
                 }
                 for c in plan_mod.clips_de_semana(actual)
             ]
@@ -168,6 +168,7 @@ def mostrar():
             detalle = plan_mod.clips_de_semana(semana)
             nuevos = []
             nuevos_estados = []
+            nuevos_tiktok = []
             for i, p in enumerate(plan_mod.PILARES):
                 with st.container(border=True):
                     a, b = st.columns([1, 2])
@@ -180,6 +181,9 @@ def mostrar():
                         "Estado", plan_mod.ESTADOS_CLIP, index=plan_mod.ESTADOS_CLIP.index(detalle[i]["estado"]),
                         key=f"estado_plan_{elegida}_{i}",
                     ))
+                    nuevos_tiktok.append(a.checkbox(
+                        "Programado en TikTok Studio", value=detalle[i]["tiktok"], key=f"tiktok_plan_{elegida}_{i}",
+                    ))
                     nuevos.append(b.text_area(
                         "Momento o gancho del clip", value=clips[i] if i < len(clips) else "",
                         placeholder=f"Ejemplo: {p['ejemplo']}", key=f"clip_plan_{elegida}_{i}", height=80,
@@ -187,6 +191,7 @@ def mostrar():
             if st.button("💾 Guardar plan de clips", type="primary"):
                 semana["clips"] = nuevos
                 semana["clips_estado"] = nuevos_estados
+                semana["clips_tiktok"] = nuevos_tiktok
                 _guardar(f"Planeación: clips del {elegida}")
 
     # ── Lista del viernes ──
@@ -287,7 +292,8 @@ def mostrar():
             "**Ritmo semanal**\n"
             f"- Viernes: episodio en Spotify ({plan_mod.HORA_SPOTIFY}) + clip 1 ({plan_mod.HORA_CLIPS}).\n"
             f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS} Los 3 se programan el jueves anterior.\n"
-            "- El mismo archivo va a Instagram (prioridad) y TikTok. Sin carruseles ni Historias diarias.\n\n"
+            "- El mismo archivo va a Instagram (prioridad, sale solo desde la app) y TikTok (programado en TikTok Studio). "
+            "Sin carruseles ni Historias diarias.\n\n"
             "**Los 3 pilares (un clip de cada uno por semana)**"
         )
         st.dataframe(
