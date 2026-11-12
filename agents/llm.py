@@ -34,6 +34,10 @@ class GeminiOcupado(RuntimeError):
     """Google sigue saturado después de todos los reintentos y modelos de respaldo."""
 
 
+class GeminiSinCuota(GeminiOcupado):
+    """Se agotó la cuota de la clave de Gemini (error 429): esperar minutos no lo arregla."""
+
+
 def cliente() -> genai.Client:
     global _cliente
     if _cliente is None:
@@ -64,9 +68,29 @@ def _es_temporal(e: Exception) -> bool:
     return isinstance(e, errors.APIError) and codigo in _CODIGOS_TEMPORALES
 
 
+def _es_cuota(e: Exception) -> bool:
+    """429 = se agotó la cuota o el límite de peticiones de la clave."""
+    return isinstance(e, errors.APIError) and getattr(e, "code", None) == 429
+
+
+def _es_cuota_diaria(e: Exception) -> bool:
+    """La cuota del día no vuelve esperando unos segundos: no vale la pena reintentar."""
+    texto = str(e)
+    return _es_cuota(e) and ("PerDay" in texto or "per day" in texto.lower())
+
+
+def _detalle(e: Optional[Exception]) -> str:
+    """Mensaje original de Google, corto, para no volver a ocultar la causa real."""
+    if e is None:
+        return ""
+    texto = " ".join(str(e).split())
+    return texto[:300] + ("…" if len(texto) > 300 else "")
+
+
 def _generar(contenidos: list, cfg: types.GenerateContentConfig):
     """generate_content con reintentos y modelos de respaldo ante errores temporales."""
     ultimo_error: Optional[Exception] = None
+    errores_temporales = []
     for modelo in _modelos():
         for intento in range(len(_ESPERAS) + 1):
             try:
@@ -79,11 +103,30 @@ def _generar(contenidos: list, cfg: types.GenerateContentConfig):
                         break
                     raise
                 ultimo_error = e
+                errores_temporales.append(e)
+                if _es_cuota_diaria(e):
+                    # Cuota del día agotada para este modelo: probar el siguiente sin esperar.
+                    break
                 if intento < len(_ESPERAS):
                     time.sleep(_ESPERAS[intento] + random.uniform(0, 3))
+    if errores_temporales and all(_es_cuota(e) for e in errores_temporales):
+        diaria = any(_es_cuota_diaria(e) for e in errores_temporales)
+        cuando = (
+            "La cuota diaria se renueva a medianoche de California (entre las 2 y las 3 a. m. hora de Colombia). "
+            if diaria
+            else "Si es el límite por minuto, vuelve a intentarlo en 1 o 2 minutos; si persiste, es la cuota del día. "
+        )
+        raise GeminiSinCuota(
+            "Se acabó la cuota de tu clave de Gemini (error 429 de Google, no de la app). "
+            + cuando
+            + "Para no esperar, activa la facturación en el proyecto de la clave en aistudio.google.com. "
+            + "Lo que ya hiciste en la app no se pierde. "
+            + f"Detalle de Google: {_detalle(ultimo_error)}"
+        ) from ultimo_error
     raise GeminiOcupado(
         "Gemini está saturado en este momento (error temporal de Google, no de la app). "
-        "Espera unos minutos y vuelve a intentarlo; lo que ya hiciste en la app no se pierde."
+        "Espera unos minutos y vuelve a intentarlo; lo que ya hiciste en la app no se pierde. "
+        f"Detalle de Google: {_detalle(ultimo_error)}"
     ) from ultimo_error
 
 
