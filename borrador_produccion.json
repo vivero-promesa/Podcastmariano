@@ -1,12 +1,12 @@
 {
-  "fecha": "12/11/2026 11:27 AM",
-  "resumen": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio — llegaste hasta: enfoques",
+  "fecha": "12/11/2026 11:32 AM",
+  "resumen": "¿Qué hacer con los embriones congelados si me arrepentí de una FIV? — llegaste hasta: enfoques",
   "estado": {
     "docs_sel": [
       "DP"
     ],
-    "tema_input": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio",
-    "duracion": 18,
+    "tema_input": "¿Qué hacer con los embriones congelados si me arrepentí de una FIV?",
+    "duracion": 8,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
