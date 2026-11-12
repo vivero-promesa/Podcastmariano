@@ -6,7 +6,7 @@
       "DP"
     ],
     "tema_input": "¿Qué hacer con los embriones congelados si me arrepentí de una FIV?",
-    "duracion": 8,
+    "duracion": 20,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
