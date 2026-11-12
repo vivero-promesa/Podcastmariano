@@ -1,0 +1,52 @@
+{
+  "fecha": "12/11/2026 11:27 AM",
+  "resumen": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio — llegaste hasta: enfoques",
+  "estado": {
+    "docs_sel": [
+      "DP"
+    ],
+    "tema_input": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio",
+    "duracion": 18,
+    "enfoques": [
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "¿Es pecado seleccionar embriones sanos con diagnóstico genético en FIV?",
+          "por_que": "Responde con ternura a parejas con antecedentes de enfermedades hereditarias que sienten la presión médica de descartar embriones enfermos.",
+          "puntos": [
+            "La distinción moral entre el diagnóstico prenatal lícito y el diagnóstico preimplantatorio eugenésico (Dignitas Personae nn. 21-22).",
+            "El drama ético del descarte de embriones y la mentalidad discriminatoria hacia la discapacidad o enfermedad.",
+            "El valor incondicional de la persona humana desde la fecundación, independientemente de su perfil genético.",
+            "Esperanza y consuelo pastoral para matrimonios que viven el miedo a transmitir una patología genética a sus hijos."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "¿Qué hacer con los embriones congelados si me arrepentí de una FIV?",
+          "por_que": "Aborda el dolor y la culpa de conversos que ya tienen embriones en nitrógeno líquido y no saben cómo actuar según la Iglesia católica.",
+          "puntos": [
+            "El reconocimiento de los embriones congelados como verdaderos hijos humanos en una situación de injusticia irreparable (Dignitas Personae nn. 18-19).",
+            "Por qué la Iglesia católica advierte sobre los dilemas éticos irresolubles de la llamada adopción o rescate de embriones.",
+            "El rechazo al uso de embriones huérfanos para investigación con células madre o donación a terceros.",
+            "Camino de reconciliación, paz interior y encomendación de esos hijos a la misericordia y paternidad de Dios."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "¿Permite la Iglesia católica la terapia génica para curar a un bebé?",
+          "por_que": "Diferencia la medicina restaurativa que la Iglesia aplaude del afán tecnológico de manipular o diseñar hijos en laboratorios.",
+          "puntos": [
+            "La aprobación moral de las terapias génicas somáticas estrictamente curativas que respetan la dignidad del paciente (Dignitas Personae nn. 25-26).",
+            "Los peligros éticos y desproporción de riesgos en las modificaciones genéticas sobre la línea germinal del embrión.",
+            "El límite entre sanar una enfermedad y la tentación eugenésica de mejorar o programar características biológicas.",
+            "La vocación del médico católico como servidor de la vida herida y no como árbitro de la naturaleza humana."
+          ]
+        }
+      }
+    ]
+  }
+}
