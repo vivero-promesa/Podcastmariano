@@ -6,7 +6,7 @@
       "DP"
     ],
     "tema_input": "¿Permite la Iglesia católica la terapia génica para curar a un bebé?",
-    "duracion": 20,
+    "duracion": 15,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
