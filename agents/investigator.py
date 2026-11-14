@@ -4,9 +4,13 @@ from typing import List, Optional
 import config
 from agents import llm
 from agents.fuentes import texto_oficial
+from agents.recorte import pasajes_relevantes
 
-# Tope del texto oficial que se envía a Gemini cuando se combinan documentos (~150 mil tokens).
-LIMITE_TOTAL = 600_000
+# Tope del texto oficial que se envía a Gemini, sumando todos los documentos.
+# 60 mil caracteres ≈ 15 mil tokens: cabe de sobra en la cuota GRATUITA de Gemini
+# (antes se enviaban hasta 600 mil ≈ 150 mil tokens, dos veces, y Google respondía 429).
+# Solo se envían los párrafos relacionados con el tema; se cambia con LIMITE_TEXTO_OFICIAL.
+LIMITE_TOTAL = getattr(config, "LIMITE_TEXTO_OFICIAL", 60_000)
 
 SISTEMA = f"""
 Eres la investigadora del podcast católico «{config.PODCAST['nombre']}».
@@ -76,7 +80,7 @@ def investigar(
             sin_texto.append(d["titulo"])
             continue
         try:
-            texto = texto_oficial(d["url"])[:tope]
+            texto = pasajes_relevantes(texto_oficial(d["url"]), tema, indicaciones, limite=tope)
             partes.append(f"=== DOCUMENTO: {config.etiqueta_documento(d)} — {d['url']} ===\n{texto}")
             urls.append(d["url"])
         except Exception as e:  # sin internet o vatican.va caído: seguimos con búsqueda web
@@ -111,6 +115,7 @@ def investigar(
     return {
         "informe": informe,
         "fuente_url": " · ".join(urls),
+        # Los mismos párrafos que leyó la Investigadora: el Censor verifica contra ellos.
         "fuente_texto": fuente,
         "con_fuente_oficial": bool(fuente) and not sin_texto,
         "error_fuente": "; ".join(errores) or (f"Sin texto oficial: {', '.join(sin_texto)}" if sin_texto else ""),

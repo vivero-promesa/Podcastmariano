@@ -7,6 +7,7 @@ modelo principal sigue caído, prueba uno por uno los modelos de respaldo
 gemini-flash-latest y gemini-flash-lite-latest, que usa otra capacidad de Google).
 """
 import random
+import re
 import time
 from typing import Optional, Type, TypeVar
 
@@ -79,6 +80,13 @@ def _es_cuota_diaria(e: Exception) -> bool:
     return _es_cuota(e) and ("PerDay" in texto or "per day" in texto.lower())
 
 
+def _espera_cuota(e: Exception) -> float:
+    """Segundos que Google pide esperar (retryDelay), entre 10 y 60."""
+    m = re.search(r"retry(?:Delay)?[^0-9]{0,20}(\d+(?:\.\d+)?)\s*s", str(e), re.IGNORECASE)
+    segundos = float(m.group(1)) if m else 40.0
+    return min(60.0, max(10.0, segundos)) + random.uniform(0, 2)
+
+
 def _detalle(e: Optional[Exception]) -> str:
     """Mensaje original de Google, corto, para no volver a ocultar la causa real."""
     if e is None:
@@ -107,6 +115,14 @@ def _generar(contenidos: list, cfg: types.GenerateContentConfig):
                 if _es_cuota_diaria(e):
                     # Cuota del día agotada para este modelo: probar el siguiente sin esperar.
                     break
+                if _es_cuota(e):
+                    # Límite por minuto del plan gratuito: reintentar varias veces seguidas solo
+                    # gasta más cuota. Se espera lo que Google indica (máx. 60 s) UNA sola vez
+                    # y luego se pasa al modelo de respaldo, que tiene su propia cuota.
+                    if intento >= 1:
+                        break
+                    time.sleep(_espera_cuota(e))
+                    continue
                 if intento < len(_ESPERAS):
                     time.sleep(_ESPERAS[intento] + random.uniform(0, 3))
     if errores_temporales and all(_es_cuota(e) for e in errores_temporales):
