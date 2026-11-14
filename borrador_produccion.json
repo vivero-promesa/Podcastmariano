@@ -1,12 +1,12 @@
 {
-  "fecha": "14/11/2026 11:22 AM",
-  "resumen": "¿Permite la Iglesia católica la terapia génica para curar a un bebé? — llegaste hasta: enfoques",
+  "fecha": "14/11/2026 11:29 AM",
+  "resumen": "Familia y matrimonio — llegaste hasta: enfoques",
   "estado": {
     "docs_sel": [
-      "DP"
+      "FC"
     ],
-    "tema_input": "¿Permite la Iglesia católica la terapia génica para curar a un bebé?",
-    "duracion": 15,
+    "tema_input": "Familia y matrimonio",
+    "duracion": 18,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
