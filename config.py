@@ -38,6 +38,13 @@ MODELO = _secreto("GEMINI_MODEL", "gemini-3.8-flash")
 # El "lite" usa otra capacidad de Google y casi siempre responde. Se cambia con GEMINI_MODEL_RESPALDO.
 MODELO_RESPALDO = _secreto("GEMINI_MODEL_RESPALDO", "gemini-flash-latest,gemini-flash-lite-latest")
 
+# Máximo de caracteres del texto oficial que se envía a Gemini en cada investigación
+# (solo los párrafos relacionados con el tema). 60 000 ≈ 15 mil tokens: cabe en la cuota gratuita.
+try:
+    LIMITE_TEXTO_OFICIAL = int(_secreto("LIMITE_TEXTO_OFICIAL", "60000"))
+except (TypeError, ValueError):
+    LIMITE_TEXTO_OFICIAL = 60_000
+
 # Modelos de Gemini que crean imágenes (fondos de clips y carrusel), en orden. Si ninguno
 # responde, la app busca sola uno disponible en tu cuenta. Se cambia con GEMINI_MODELO_IMAGEN.
 MODELO_IMAGEN = _secreto("GEMINI_MODELO_IMAGEN", "gemini-2.5-flash-image,gemini-3-pro-image-preview")
