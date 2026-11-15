@@ -104,7 +104,8 @@ def trocear(segmentos: List[dict], max_palabras: int = 4) -> List[dict]:
         trozos = [palabras[i:i + max_palabras] for i in range(0, len(palabras), max_palabras)]
         # Evita un último trozo de una sola palabra suelta.
         if len(trozos) > 1 and len(trozos[-1]) == 1:
-            trozos[-2] += trozos.pop()
+            ultimo = trozos.pop()
+            trozos[-1] += ultimo
         total_letras = sum(len(" ".join(t)) for t in trozos) or 1
         t = s["inicio"]
         dur = max(0.2, s["fin"] - s["inicio"])
