@@ -1,5 +1,5 @@
 {
-  "fecha": "15/11/2026 10:21 AM",
+  "fecha": "15/11/2026 10:23 AM",
   "resumen": "¿Permite la Iglesia católica la terapia génica para curar a un bebé? — llegaste hasta: investigación",
   "estado": {
     "docs_sel": [
@@ -82,6 +82,6 @@
         ]
       }
     },
-    "ok_inv": false
+    "ok_inv": true
   }
 }
