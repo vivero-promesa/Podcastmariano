@@ -1,49 +1,49 @@
 {
-  "fecha": "19/11/2026 06:34 PM",
-  "resumen": "Ética de la tecnología — llegaste hasta: enfoques",
+  "fecha": "19/11/2026 06:38 PM",
+  "resumen": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio — llegaste hasta: enfoques",
   "estado": {
     "docs_sel": [
-      "CV"
+      "DP"
     ],
-    "tema_input": "Ética de la tecnología",
+    "tema_input": "Clonación, células madre, embriones congelados y diagnóstico preimplantatorio",
     "duracion": 18,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
         "datos": {
-          "pregunta": "¿Si la ciencia médica lo puede hacer, por qué la Iglesia dice no a la FIV?",
-          "por_que": "Ayuda a sanar la frustración de sentir que la Iglesia se opone al progreso, explicando el límite humanizador entre sanar y fabricar una vida humana.",
+          "pregunta": "¿Puedo adoptar un embrión congelado para salvarlo según la Iglesia?",
+          "por_que": "Acompaña con profunda ternura a matrimonios conmovidos por el abandono de embriones, aclarando el doloroso dilema bioético que Dignitas Personae aborda con franqueza.",
           "puntos": [
-            "La técnica como don que se desvía cuando busca sustituir el misterio del origen humano (n. 68 y 69).",
-            "El riesgo de tratar al hijo como un producto tecnológico de laboratorio y no como un don gratuito (n. 74).",
-            "El principio ético de que no todo lo técnicamente factible es humanamente digno (n. 70).",
-            "El desarrollo auténtico de la medicina: restaurar la fertilidad sin manipular el origen de la persona (n. 75)."
+            "El drama ético y la injusticia de origen de los miles de embriones humanos abandonados en nitrógeno líquido (DP 19).",
+            "Por qué la 'adopción prenatal' suscita graves objeciones morales a pesar de la recta intención de querer salvarlos.",
+            "La imposibilidad de resolver mediante una técnica posterior una lesión intrínseca a la dignidad humana.",
+            "Cómo abrazar con la oración y el duelo espiritual a los hijos que permanecen sin destino en el laboratorio."
           ]
         }
       },
       {
         "__modelo__": "agents.enfoques:Enfoque",
         "datos": {
-          "pregunta": "Vientre de alquiler e infertilidad: ¿qué enseña la Iglesia católica?",
-          "por_que": "Ofrece luz frente a una práctica en auge comercial, mostrando con compasión por qué convertir la gestación en un contrato técnico hiere a la madre y al bebé.",
+          "pregunta": "¿La pastilla del día después o el DIU eliminan embriones? La verdad católica",
+          "por_que": "Responde con claridad médica y pastoral a mujeres que tienen dudas o culpa por haber usado fármacos o dispositivos sin conocer su efecto en el embrión temprano.",
           "puntos": [
-            "La tentación prometeica de considerar la vida y el cuerpo como materiales moldeables por contrato (n. 68).",
-            "La deshumanización que surge al fusionar tecnología médica y lógica de mercado en la procreación (n. 74).",
-            "La dignidad del vínculo materno que no puede fragmentarse ni reducirse a un servicio de producción (n. 70).",
-            "La necesidad de una ecología humana integral que defienda la dignidad de los más vulnerables (n. 51)."
+            "Diferencia entre métodos anticonceptivos, interceptivos y contragestivos según Dignitas Personae (DP 23).",
+            "El inicio de la vida desde la fecundación y el efecto que impide la anidación del embrión en el útero materno.",
+            "Misericordia, sanación de la culpa y reconciliación para quienes los usaron por desconocimiento o presión médica.",
+            "El valor de la medicina reproductiva respetuosa que no interfiere destructivamente con la vida concebida."
           ]
         }
       },
       {
         "__modelo__": "agents.enfoques:Enfoque",
         "datos": {
-          "pregunta": "Infertilidad: ¿puede la tecnología quitarnos el dolor de no tener hijos?",
-          "por_que": "Acompaña el vacío emocional de la espera sin hijos, advirtiendo sobre la falsa promesa de que la técnica por sí sola traerá la paz al matrimonio.",
+          "pregunta": "Diagnóstico preimplantatorio en FIV: ¿por qué la Iglesia lo rechaza?",
+          "por_que": "Consuela a parejas portadoras de enfermedades genéticas que sufren la presión clínica de seleccionar embriones sanos y descartar a los enfermos.",
           "puntos": [
-            "La ilusión de autosuficiencia: creer que la técnica resuelve las preguntas profundas del sufrimiento y la vida (n. 70).",
-            "Cómo la presión del éxito técnico puede desgastar el amor conyugal y convertir el hijo en una exigencia (n. 74).",
-            "La esperanza cristiana frente a la tiranía del resultado: fecundidad espiritual en medio de la cruz (n. 75).",
-            "La caridad en la verdad como camino para hallar consuelo sin perder de vista la dignidad humana (n. 1 y 77)."
+            "La distinción moral entre una terapia génica orientada a sanar y la selección eugenésica de embriones (DP 22, 26).",
+            "El dolor invisible del descarte de embriones con anomalías cromosómicas visto a la luz de la dignidad de todo ser humano.",
+            "La cruz real del miedo a transmitir enfermedades hereditarias y el llamado cristiano a acoger la debilidad.",
+            "Criterios de acompañamiento pastoral y esperanza para los matrimonios que deciden no recurrir a la selección genética."
           ]
         }
       }
