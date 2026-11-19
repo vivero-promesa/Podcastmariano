@@ -1,0 +1,52 @@
+{
+  "fecha": "19/11/2026 06:34 PM",
+  "resumen": "Ética de la tecnología — llegaste hasta: enfoques",
+  "estado": {
+    "docs_sel": [
+      "CV"
+    ],
+    "tema_input": "Ética de la tecnología",
+    "duracion": 18,
+    "enfoques": [
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "¿Si la ciencia médica lo puede hacer, por qué la Iglesia dice no a la FIV?",
+          "por_que": "Ayuda a sanar la frustración de sentir que la Iglesia se opone al progreso, explicando el límite humanizador entre sanar y fabricar una vida humana.",
+          "puntos": [
+            "La técnica como don que se desvía cuando busca sustituir el misterio del origen humano (n. 68 y 69).",
+            "El riesgo de tratar al hijo como un producto tecnológico de laboratorio y no como un don gratuito (n. 74).",
+            "El principio ético de que no todo lo técnicamente factible es humanamente digno (n. 70).",
+            "El desarrollo auténtico de la medicina: restaurar la fertilidad sin manipular el origen de la persona (n. 75)."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "Vientre de alquiler e infertilidad: ¿qué enseña la Iglesia católica?",
+          "por_que": "Ofrece luz frente a una práctica en auge comercial, mostrando con compasión por qué convertir la gestación en un contrato técnico hiere a la madre y al bebé.",
+          "puntos": [
+            "La tentación prometeica de considerar la vida y el cuerpo como materiales moldeables por contrato (n. 68).",
+            "La deshumanización que surge al fusionar tecnología médica y lógica de mercado en la procreación (n. 74).",
+            "La dignidad del vínculo materno que no puede fragmentarse ni reducirse a un servicio de producción (n. 70).",
+            "La necesidad de una ecología humana integral que defienda la dignidad de los más vulnerables (n. 51)."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "Infertilidad: ¿puede la tecnología quitarnos el dolor de no tener hijos?",
+          "por_que": "Acompaña el vacío emocional de la espera sin hijos, advirtiendo sobre la falsa promesa de que la técnica por sí sola traerá la paz al matrimonio.",
+          "puntos": [
+            "La ilusión de autosuficiencia: creer que la técnica resuelve las preguntas profundas del sufrimiento y la vida (n. 70).",
+            "Cómo la presión del éxito técnico puede desgastar el amor conyugal y convertir el hijo en una exigencia (n. 74).",
+            "La esperanza cristiana frente a la tiranía del resultado: fecundidad espiritual en medio de la cruz (n. 75).",
+            "La caridad en la verdad como camino para hallar consuelo sin perder de vista la dignidad humana (n. 1 y 77)."
+          ]
+        }
+      }
+    ]
+  }
+}
