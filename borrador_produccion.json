@@ -1,6 +1,6 @@
 {
-  "fecha": "19/11/2026 07:13 PM",
-  "resumen": "que se hace con los embriones congelados cuales son las cifras hoy en el mundo  y la tendencia datos — llegaste hasta: guion",
+  "fecha": "19/11/2026 07:14 PM",
+  "resumen": "que se hace con los embriones congelados cuales son las cifras hoy en el mundo  y la tendencia datos — llegaste hasta: paquete de publicación",
   "estado": {
     "docs_sel": [
       "DP"
@@ -120,6 +120,44 @@
         ]
       }
     },
-    "ok_guion": true
+    "ok_guion": true,
+    "paquete": {
+      "__modelo__": "agents.publicacion:PaqueteEpisodio",
+      "datos": {
+        "titulos": [
+          "Embriones congelados: ¿qué dice la Iglesia? | Dignitas Personae",
+          "Fecundación in vitro y embriones congelados | Dignitas Personae",
+          "FIV y embriones congelados: ¿es pecado? | Dignitas Personae"
+        ],
+        "descripcion": "Hoy existen millones de embriones congelados en el mundo, suspendidos en tanques de nitrógeno líquido. Detrás de esta alarmante cifra global se esconde el drama silencioso de miles de parejas que, tras recurrir a la fecundación in vitro en medio del dolor de la infertilidad, se enfrentan a un laberinto moral sin respuesta aparente.\n\nA la luz de la instrucción Dignitas Personae (2008), analizamos las implicaciones éticas de la criopreservación, la inviabilidad moral de la adopción prenatal y por qué la Iglesia describe esta realidad como una injusticia irreparable, recordando con firmeza que cada vida humana concebida es una persona amada por Dios.\n\nUn episodio pensado para acompañar el dolor con verdad y ternura, ofreciendo consuelo pastoral, el abrazo de la misericordia divina y una mirada esperanzadora hacia la maternidad que abraza la cruz.",
+        "palabras_clave": [
+          "embriones congelados",
+          "fecundación in vitro",
+          "FIV es pecado",
+          "infertilidad católica",
+          "Dignitas Personae",
+          "bioética católica",
+          "adopción prenatal",
+          "criopreservación de embriones"
+        ],
+        "hashtags_instagram": [
+          "#BioeticaCatolica",
+          "#EmbrionesCongelados",
+          "#InfertilidadCatolica",
+          "#DignitasPersonae",
+          "#CatolicosMexico",
+          "#CatolicosColombia",
+          "#FecundacionInVitro",
+          "#FeYRazon"
+        ],
+        "hashtags_tiktok": [
+          "#embrionescongelados",
+          "#fecundacioninvitro",
+          "#bioeticacatolica"
+        ],
+        "texto_portada": "Embriones congelados: ¿qué hacer?",
+        "prompt_portada": "Photorealistic Catholic editorial style. A dramatic and poignant conceptual composition with a strong warm versus cold contrast. On one side, icy blue nitrogen frost and cold glass reflections; on the other, a gentle, warm golden divine light descending from above. A soft and compassionate human hand reaches gently near the cold space, reminiscent of the Creation of Adam gesture. In the soft-focused background, the subtle shadow of a sacred cross on a stone sanctuary wall. Cinematic lighting, deep emotional weight, sacred and contemplative atmosphere, no text, 1:1 aspect ratio."
+      }
+    }
   }
 }
