@@ -22,7 +22,7 @@ from paginas.comun import exigir_clave
 from paginas import planeacion_ui
 
 st.title("📱 Estudio de Redes")
-st.caption("Cada clip lleva a Spotify: gancho en pantalla, subtítulos y «Episodio completo en Spotify».")
+st.caption("Cada clip: pregunta directa en pantalla desde el segundo 0, subtítulos, pregunta para el público y «Episodio completo en mi perfil». Se publica con la etiqueta de IA.")
 
 exigir_clave()
 if not video.ffmpeg_disponible():
