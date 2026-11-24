@@ -8,7 +8,7 @@ Diseño (1080x1920):
   y 250       gancho (texto grande con caja)
   y 860-1120  onda de sonido dorada
   y ~1360     subtítulos (2 líneas máx., palabras grandes)
-  y 1450      «Episodio completo en Spotify» (pastilla dorada) + @usuario
+  y 1450      «Episodio completo en mi perfil» (pastilla dorada) + @usuario
   y 1650+     libre (ahí va el texto de la publicación y los botones)
 """
 import os
@@ -213,7 +213,7 @@ def hacer_video_vertical(
     with open(os.path.join(carpeta, "_gancho.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(textwrap.wrap(gancho.strip(), 20)))
     with open(os.path.join(carpeta, "_spotify.txt"), "w", encoding="utf-8") as f:
-        f.write("Episodio completo en Spotify")
+        f.write("Episodio completo en mi perfil")
     with open(os.path.join(carpeta, "_usuario.txt"), "w", encoding="utf-8") as f:
         f.write(config.PODCAST["instagram"])
     nombre_subs = None
