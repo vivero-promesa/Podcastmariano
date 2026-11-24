@@ -126,6 +126,8 @@ def publicar_instagram(mp4: str, texto: str, portada: Optional[str] = None,
         "video_url": video_url,
         "caption": texto[:2200],
         "share_to_feed": "true",
+        # Etiqueta «Información de IA» de Instagram (los clips llevan imagen y apoyo de IA).
+        "is_ai_generated": "true",
     }
     if portada and os.path.exists(portada):
         try:
@@ -136,15 +138,24 @@ def publicar_instagram(mp4: str, texto: str, portada: Optional[str] = None,
         datos["trial_params"] = '{"graduation_strategy":"SS_PERFORMANCE"}'
 
     avisar("📦 Creando el Reel en Instagram…")
-    try:
-        contenedor = _ig("POST", f"{cuenta['id']}/media", **datos)
-    except ErrorPublicacion:
-        if not reel_de_prueba:
-            raise
-        # Si la cuenta aún no tiene Reels de prueba, se publica como Reel normal.
-        datos.pop("trial_params", None)
-        avisar("ℹ️ Tu cuenta no admite Reel de prueba por API; se publica como Reel normal.")
-        contenedor = _ig("POST", f"{cuenta['id']}/media", **datos)
+    contenedor = None
+    for _ in range(3):
+        try:
+            contenedor = _ig("POST", f"{cuenta['id']}/media", **datos)
+            break
+        except ErrorPublicacion as e:
+            if "is_ai_generated" in datos and "is_ai_generated" in str(e):
+                # Si la API no acepta la etiqueta para esta cuenta, se publica sin ella y se avisa.
+                datos.pop("is_ai_generated")
+                avisar("⚠️ Instagram no aceptó la etiqueta de IA por API: márcala a mano en el Reel.")
+            elif "trial_params" in datos:
+                # Si la cuenta aún no tiene Reels de prueba, se publica como Reel normal.
+                datos.pop("trial_params")
+                avisar("ℹ️ Tu cuenta no admite Reel de prueba por API; se publica como Reel normal.")
+            else:
+                raise
+    if contenedor is None:
+        raise ErrorPublicacion("Instagram no aceptó el Reel. Inténtalo de nuevo en unos minutos.")
     cid = contenedor["id"]
 
     avisar("⏳ Instagram está procesando el video (puede tardar 1-3 minutos)…")
@@ -307,11 +318,13 @@ def publicar_tiktok(mp4: str, texto: str, avisar=lambda m: None) -> dict:
                 "disable_stitch": False,
                 "disable_comment": False,
                 "video_cover_timestamp_ms": 500,
+                "is_aigc": True,  # etiqueta «Contenido generado por IA» de TikTok
             },
             "source_info": fuente,
         })
     else:
         avisar("📦 Preparando el envío a tu bandeja de TikTok…")
+        avisar("🏷️ Al publicar desde TikTok, activa «Contenido generado por IA» en Más opciones: el modo borrador no permite marcarlo por API.")
         datos = _tt("post/publish/inbox/video/init/", {"source_info": fuente})
 
     avisar("⬆️ Subiendo el video a TikTok…")

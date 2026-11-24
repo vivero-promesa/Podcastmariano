@@ -10,13 +10,17 @@ from agents import llm, video
 from agents.publicacion import hashtags_instagram_finales, hashtags_tiktok_finales
 
 
+# Cierre de cada clip (texto y pastilla del video): lleva al perfil, donde está el enlace al episodio.
+LLAMADO_PERFIL = "Episodio completo en mi perfil"
+
+
 class ClipPropuesto(BaseModel):
     inicio: str = Field(description="Inicio en el audio, formato MM:SS o HH:MM:SS")
     fin: str = Field(description="Fin en el audio, formato MM:SS o HH:MM:SS. Duración entre 30 y 90 segundos")
-    gancho: str = Field(description="Texto en pantalla de máximo 8 palabras que detenga el scroll")
+    gancho: str = Field(description="Pregunta directa entre ¿?, máximo 8 palabras, con una palabra de búsqueda (ej.: «¿Es pecado la FIV?»). Sale en pantalla desde el segundo 0")
     por_que_funciona: str = Field(description="Por qué este momento puede volverse viral")
-    texto_instagram: str = Field(description="Caption para Instagram de 2 a 4 líneas, sin hashtags. Empieza con el momento o con una pregunta real que la gente se hace (nunca «nuevo episodio») y termina con una pregunta que invite a comentar")
-    texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags. Empieza con una pregunta que la gente busca")
+    texto_instagram: str = Field(description="Caption para Instagram de 2 a 4 líneas, sin hashtags. Empieza con el momento o con una pregunta real que la gente se hace (nunca «nuevo episodio») y termina con una pregunta para el público que invite a comentar")
+    texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags. Empieza con una pregunta que la gente busca y termina con una pregunta para el público que invite a comentar")
     hashtags_instagram: List[str] = Field(description="7 hashtags temáticos con #")
     hashtags_tiktok: List[str] = Field(description="3 hashtags temáticos con #")
     prompt_imagen: str = Field(
@@ -66,7 +70,8 @@ Escucha completo este episodio de «{config.PODCAST['nombre']}».
 {('Contexto: ' + contexto) if contexto else ''}
 
 1. Elige los {cantidad} mejores momentos para clips verticales de 30 a 90 segundos.
-   Criterios virales: frase que detiene el scroll en los primeros 3 segundos, se entiende sin contexto,
+   Criterios virales: en los primeros 2 segundos se escucha una pregunta directa (ej.: «¿Es pecado la FIV?»);
+   prefiere momentos que empiezan con una pregunta y haz que el clip empiece justo en ella. Se entiende sin contexto,
    genera emoción o debate, responde una pregunta que la gente busca ({", ".join(config.PALABRAS_BUSQUEDA[:6])}).
    El clip debe empezar al inicio de una frase y terminar al final de una idea.
    Ordena los clips así, si el episodio lo permite: clip 1 = una pregunta real que la gente busca;
@@ -102,10 +107,10 @@ def subtitular(ruta_clip: str) -> List[dict]:
 def textos_clip(clip: ClipPropuesto, enlace_episodio: str = "") -> dict:
     enlace = enlace_episodio or config.PODCAST["spotify"]
     ig = (
-        f"{clip.texto_instagram.strip()}\n\n🎧 {config.PODCAST['llamado_spotify']}\n\n"
+        f"{clip.texto_instagram.strip()}\n\n🎧 {LLAMADO_PERFIL}\n\n"
         + " ".join(hashtags_instagram_finales(clip.hashtags_instagram))
     )
-    tt = f"{clip.texto_tiktok.strip()} 🎧 Episodio completo en Spotify (link en bio) " + " ".join(
+    tt = f"{clip.texto_tiktok.strip()} 🎧 {LLAMADO_PERFIL} " + " ".join(
         hashtags_tiktok_finales(clip.hashtags_tiktok)
     )
     return {"instagram": ig, "tiktok": tt, "enlace": enlace}
