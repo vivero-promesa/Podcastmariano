@@ -23,8 +23,8 @@ REGLAS:
 FORMULA = """
 Sigue esta fórmula, en este orden. Marca cada sección con una línea tipo «--- HOOK ---» (no se lee).
 
-1. HOOK (primeros 30 s): una pregunta o dato que detenga el scroll, usando una palabra de búsqueda (ej.: «¿La FIV es pecado?»).
-2. PRESENTACIÓN (15 s): «Bienvenida a La maternidad no siempre tiene cuna…» y de qué trata hoy.
+1. HOOK (primeros 15 s): la primera frase del guion ES la pregunta del episodio o el inicio de una historia real, usando una palabra de búsqueda (ej.: «¿La FIV es pecado?»). Nada antes: ni saludo, ni música larga, ni nombre del programa, ni cita, ni nombre del documento.
+2. PRESENTACIÓN (máximo 10 s, DESPUÉS del hook): «Esto es La maternidad no siempre tiene cuna…» y qué va a ganar quien escucha hoy. Las citas y el documento vienen después, nunca en el primer minuto.
 3. HISTORIA: una historia humana real o documentada de la investigación.
 4. PREGUNTA CENTRAL: el dilema de fondo.
 5. LO QUE DICE LA IGLESIA: las enseñanzas clave con sus citas exactas, explicadas con metáforas sencillas.
