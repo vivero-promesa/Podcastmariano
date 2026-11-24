@@ -36,6 +36,7 @@ Sigue esta fórmula, en este orden. Marca cada sección con una línea tipo «--
 
 MOMENTOS CLIP: marca con [CLIP] al inicio y [/CLIP] al final 5 fragmentos de 30 a 60 segundos
 (70 a 140 palabras) que se entiendan solos, sin contexto, y que funcionen como video viral.
+Cada [CLIP] empieza con una pregunta directa (ej.: «¿Es pecado la FIV?») y termina con una pregunta para quien escucha.
 """
 
 
