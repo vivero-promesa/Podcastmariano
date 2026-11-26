@@ -1,12 +1,12 @@
 {
-  "fecha": "26/11/2026 02:16 PM",
-  "resumen": "Unidad cuerpo-alma, matrimonio y procreación — llegaste hasta: enfoques",
+  "fecha": "26/11/2026 02:22 PM",
+  "resumen": "Tratamientos de fertilidad permitidos y prohibidos por la Iglesia católica — llegaste hasta: enfoques",
   "estado": {
     "docs_sel": [
       "GS"
     ],
-    "tema_input": "Unidad cuerpo-alma, matrimonio y procreación",
-    "duracion": 18,
+    "tema_input": "Tratamientos de fertilidad permitidos y prohibidos por la Iglesia católica",
+    "duracion": 8,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
