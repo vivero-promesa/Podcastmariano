@@ -1,0 +1,49 @@
+{
+  "fecha": "26/11/2026 02:16 PM",
+  "resumen": "Unidad cuerpo-alma, matrimonio y procreación — llegaste hasta: enfoques",
+  "estado": {
+    "docs_sel": [
+      "GS"
+    ],
+    "tema_input": "Unidad cuerpo-alma, matrimonio y procreación",
+    "duracion": 18,
+    "enfoques": [
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "¿Cómo cuidar la intimidad conyugal durante la infertilidad? Iglesia católica",
+          "por_que": "Ofrece consuelo práctico a matrimonios que sienten que el dolor de no concebir y la rutina médica están desgastando su afecto y vida íntima.",
+          "puntos": [
+            "Gaudium et Spes 51: El valor insustituible de las muestras de amor conyugal verdadero, que fortalecen la fidelidad mutua incluso sin concepción inmediata.",
+            "Gaudium et Spes 14: La dignidad del cuerpo como parte sagrada de la persona creada por Dios, que no debe ser tratado como un instrumento defectuoso.",
+            "Criterios objetivos para preservar la entrega personal frente al riesgo de reducir los encuentros íntimos a un calendario biológico angustiante."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "Si deseo un hijo con amor, ¿por qué la FIV es pecado en la Iglesia católica?",
+          "por_que": "Responde con delicadeza la dolorosa inquietud de creyentes que no comprenden por qué un anhelo tan noble y lleno de amor no justifica acudir a un laboratorio.",
+          "puntos": [
+            "Gaudium et Spes 51: Por qué la pureza del motivo y la buena intención no bastan para definir la licitud moral de un acto humano.",
+            "La naturaleza objetiva del acto conyugal: el hijo debe nacer de la donación recíproca entre los esposos y no de una manipulación técnica exterior.",
+            "Gaudium et Spes 14: La ruptura antropológica de separar el alma y el cuerpo al confiar la generación de una persona humana a un procedimiento artificial."
+          ]
+        }
+      },
+      {
+        "__modelo__": "agents.enfoques:Enfoque",
+        "datos": {
+          "pregunta": "Tratamientos de fertilidad permitidos y prohibidos por la Iglesia católica",
+          "por_que": "Brinda claridad moral y esperanza médica a parejas confundidas entre lo que sana la fertilidad y lo que sustituye al matrimonio.",
+          "puntos": [
+            "Gaudium et Spes 51: Principios objetivos basados en la dignidad de la persona para discernir qué métodos médicos son conformes al plan divino.",
+            "Gaudium et Spes 14: La bondad intrínseca del cuerpo humano que justifica y anima las terapias médicas que buscan restaurar la salud reproductiva.",
+            "La distinción moral entre los tratamientos que asisten y curan el acto conyugal frente a aquellos que lo reemplazan por completo en probeta."
+          ]
+        }
+      }
+    ]
+  }
+}
