@@ -6,7 +6,7 @@
       "GS"
     ],
     "tema_input": "Tratamientos de fertilidad permitidos y prohibidos por la Iglesia católica",
-    "duracion": 8,
+    "duracion": 17,
     "enfoques": [
       {
         "__modelo__": "agents.enfoques:Enfoque",
