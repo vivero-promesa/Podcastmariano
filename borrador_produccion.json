@@ -1,5 +1,5 @@
 {
-  "fecha": "27/11/2026 02:21 PM",
+  "fecha": "27/11/2026 02:22 PM",
   "resumen": "Tratamientos de fertilidad permitidos y prohibidos por la Iglesia católica — llegaste hasta: investigación",
   "estado": {
     "docs_sel": [
@@ -79,6 +79,6 @@
         ]
       }
     },
-    "ok_inv": false
+    "ok_inv": true
   }
 }
