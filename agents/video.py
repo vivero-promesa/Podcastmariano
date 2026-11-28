@@ -22,6 +22,7 @@ import config
 
 FUENTE_NEGRITA = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FUENTE_NORMAL = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FUENTE_SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 COLOR_FONDO = "0x1d1b2f"
 COLOR_ONDA = "gold"
 ANCHO, ALTO = 1080, 1920
@@ -276,3 +277,222 @@ def portada_clip(video_mp4: str, gancho: str, destino: str, segundo: float = 1.0
     """Portada JPG 1080x1920 para el clip: el primer cuadro del video con el gancho.
     Sirve como portada del Reel en Instagram y para elegir la portada en TikTok."""
     _correr(["-ss", f"{segundo:.2f}", "-i", video_mp4, "-frames:v", "1", "-q:v", "2", destino])
+
+
+# ─────────────────────────── Estilo «Recorrido por la portada» ───────────────────────────
+# El estilo que eligió Elena (ejemplo: anticonceptivos_salud_hormonal_tiktok.mp4):
+#   1) Apertura: la portada del episodio centrada sobre su propia copia difuminada, @usuario arriba
+#      y la pregunta del clip debajo (pregunta en pantalla desde el segundo 0).
+#   2) Cuerpo: la cámara recorre de cerca los detalles de la portada (paneos suaves con fundidos),
+#      con la pregunta fija arriba en letra con serifa y el @usuario debajo.
+#   3) Cierre: la portada otra vez y la pastilla dorada «Episodio completo en mi perfil».
+CUADRO_PORTADA = (0, 330)          # esquina de la portada (1080x1080) en apertura y cierre
+DURACION_APERTURA = 2.5
+DURACION_CIERRE = 3.0
+FUNDIDO = 0.5
+# Zonas de la portada que recorre la cámara: (centro x, centro y, alto de la ventana), en proporción.
+# No bajan del 65 % de la altura: abajo suele estar el título ya escrito en la portada.
+# Tres looks para que los clips no se vean iguales (rotan solos por clip y por semana):
+#   Suave: tomas largas con fundido, pregunta con serifa arriba.
+#   Pulso: cortes rápidos con deslizamientos y más movimiento, pregunta en caja dorada.
+#   Cine:  bandas de cine, color cálido, tomas lentas con disolvencia, pregunta en la banda superior.
+LOOKS = {
+    "Suave": {"toma": 4.0, "fundido": 0.5, "transiciones": ["fade"], "escala": 1.12, "color": ""},
+    "Pulso": {"toma": 2.6, "fundido": 0.35, "transiciones": ["slideleft", "smoothup", "slideright", "circleopen"],
+              "escala": 1.28, "color": "eq=contrast=1.06:saturation=1.15,"},
+    "Cine": {"toma": 5.0, "fundido": 0.8, "transiciones": ["dissolve", "fadeblack"], "escala": 1.10,
+             "color": "colorbalance=rs=0.06:gs=0.02:bs=-0.06:rm=0.04:bm=-0.04,eq=saturation=0.92,"},
+}
+RECORRIDO = [
+    (0.50, 0.33, 0.56), (0.20, 0.34, 0.50), (0.80, 0.30, 0.50),
+    (0.50, 0.41, 0.40), (0.24, 0.41, 0.40), (0.76, 0.41, 0.40),
+]
+
+
+def _fuente(ruta: str, tam: int):
+    from PIL import ImageFont
+    try:
+        return ImageFont.truetype(ruta, tam)
+    except OSError:
+        return ImageFont.truetype(FUENTE_NEGRITA, tam)
+
+
+def _texto_centrado(dibujo, texto: str, y: int, fuente, ancho_max: int = 960, color="white",
+                    sombra: bool = True, interlineado: int = 12) -> int:
+    """Escribe texto centrado y partido en líneas que quepan. Devuelve la y donde terminó."""
+    palabras, lineas, actual = texto.split(), [], ""
+    for p in palabras:
+        prueba = f"{actual} {p}".strip()
+        if dibujo.textlength(prueba, font=fuente) <= ancho_max or not actual:
+            actual = prueba
+        else:
+            lineas.append(actual)
+            actual = p
+    if actual:
+        lineas.append(actual)
+    for linea in lineas:
+        w = dibujo.textlength(linea, font=fuente)
+        x = (ANCHO - w) / 2
+        if sombra:
+            for dx, dy in ((0, 3), (2, 4), (0, 5)):
+                dibujo.text((x + dx, y + dy), linea, font=fuente, fill=(0, 0, 0, 170))
+        dibujo.text((x, y), linea, font=fuente, fill=color)
+        y += fuente.size + interlineado
+    return y
+
+
+def _tarjeta(portada, destino: str, gancho: str, cierre: bool):
+    """Apertura o cierre: portada centrada sobre su copia difuminada."""
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
+    fondo = ImageOps.fit(portada, (ANCHO, ALTO), Image.LANCZOS)
+    fondo = fondo.resize((ANCHO // 8, ALTO // 8), Image.BILINEAR).filter(ImageFilter.GaussianBlur(4))
+    fondo = ImageEnhance.Brightness(fondo.resize((ANCHO, ALTO), Image.BILINEAR)).enhance(0.45).convert("RGBA")
+    cuadro = ImageOps.fit(portada, (ANCHO, ANCHO), Image.LANCZOS)
+    fondo.paste(cuadro, CUADRO_PORTADA)
+    d = ImageDraw.Draw(fondo)
+    _texto_centrado(d, config.PODCAST["instagram"], 230, _fuente(FUENTE_NORMAL, 34), color=(255, 240, 210))
+    abajo = CUADRO_PORTADA[1] + ANCHO + 50
+    if cierre:
+        f = _fuente(FUENTE_NEGRITA, 40)
+        texto = "Episodio completo en mi perfil"
+        w = d.textlength(texto, font=f)
+        x0, y0 = (ANCHO - w) / 2 - 44, abajo
+        d.rounded_rectangle((x0, y0, x0 + w + 88, y0 + 92), radius=46, fill=(240, 196, 110))
+        d.text(((ANCHO - w) / 2, y0 + 22), texto, font=f, fill=(29, 27, 47))
+    else:
+        _texto_centrado(d, gancho, abajo, _fuente(FUENTE_SERIF, 58), ancho_max=980)
+    fondo.convert("RGB").save(destino, quality=92)
+
+
+def _texto_superior(destino: str, gancho: str, look: str = "Suave"):
+    """Capa transparente del cuerpo, según el look: la pregunta arriba y el @usuario."""
+    from PIL import Image, ImageDraw
+    capa = Image.new("RGBA", (ANCHO, ALTO), (0, 0, 0, 0))
+    d = ImageDraw.Draw(capa)
+    usuario = config.PODCAST["instagram"]
+    if look == "Pulso":
+        f = _fuente(FUENTE_NEGRITA, 56)
+        lineas = textwrap.wrap(gancho, 24)
+        alto = len(lineas) * 70 + 50
+        d.rounded_rectangle((60, 200, ANCHO - 60, 200 + alto), radius=28, fill=(240, 196, 110, 240))
+        y = 225
+        for linea in lineas:
+            d.text(((ANCHO - d.textlength(linea, font=f)) / 2, y), linea, font=f, fill=(29, 27, 47))
+            y += 70
+        _texto_centrado(d, usuario, 200 + alto + 18, _fuente(FUENTE_NORMAL, 30))
+    elif look == "Cine":
+        d.rectangle((0, 0, ANCHO, 470), fill=(0, 0, 0, 255))
+        d.rectangle((0, ALTO - 300, ANCHO, ALTO), fill=(0, 0, 0, 255))
+        y = _texto_centrado(d, gancho, 230, _fuente(FUENTE_SERIF, 50), ancho_max=960, sombra=False,
+                            color=(245, 225, 190), interlineado=8)
+        _texto_centrado(d, usuario, y + 10, _fuente(FUENTE_NORMAL, 28), sombra=False, color=(255, 255, 255, 190))
+    else:
+        for y in range(560):
+            d.line([(0, y), (ANCHO, y)], fill=(8, 10, 30, int(150 * (1 - y / 560))))
+        y = _texto_centrado(d, gancho, 210, _fuente(FUENTE_SERIF, 54), ancho_max=980, interlineado=10)
+        _texto_centrado(d, usuario, y + 14, _fuente(FUENTE_NORMAL, 30), color=(255, 255, 255, 215))
+    capa.save(destino)
+
+
+def _toma(portada, zona, siguiente, destino: str, escala: float = 1.12):
+    """Imagen de una toma del recorrido: la ventana 9:16 de la zona, un poco más grande para
+    poder desplazarse hacia la zona siguiente. Devuelve el desplazamiento (dx, dy) en píxeles."""
+    from PIL import Image, ImageOps
+    W, H = portada.size
+    cx, cy, alto = zona
+    h = min(H, alto * H, 0.66 * H / escala)  # la ventana entera queda por encima del título
+    w = min(W, h * ANCHO / ALTO)
+    h = w * ALTO / ANCHO
+    margen_w, margen_h = w * (escala - 1), h * (escala - 1)
+    x = min(max(0, cx * W - (w + margen_w) / 2), W - w - margen_w)
+    y = min(max(0, cy * H - (h + margen_h) / 2), H - h - margen_h)
+    limite = 0.66 * H  # nunca bajar hasta el título escrito en la portada
+    if y + h + margen_h > limite:
+        y = limite - h - margen_h
+    x, y = max(0, x), max(0, y)
+    recorte = portada.crop((int(x), int(y), int(x + w + margen_w), int(y + h + margen_h)))
+    ancho_t, alto_t = int(ANCHO * escala) // 2 * 2, int(ALTO * escala) // 2 * 2
+    ImageOps.fit(recorte, (ancho_t, alto_t), Image.LANCZOS).save(destino, quality=92)
+    # Hacia dónde se mueve la cámara: hacia la zona siguiente.
+    dx = ancho_t - ANCHO if siguiente[0] > cx else 0
+    dy = alto_t - ALTO if siguiente[1] > cy else 0
+    return (ancho_t - ANCHO - dx, dx), (alto_t - ALTO - dy, dy)
+
+
+def hacer_video_recorrido(audio: str, subtitulos: Optional[str], gancho: str, destino: str, portada: str,
+                          look: str = "Suave", semilla: int = 0):
+    """Video 1080x1920 en el estilo «Recorrido por la portada» (ver arriba).
+    look: Suave, Pulso o Cine. semilla: cambia el orden del recorrido para que cada clip sea distinto."""
+    import random
+    from PIL import Image, ImageOps
+    cfg = LOOKS.get(look, LOOKS["Suave"])
+    fundido = cfg["fundido"]
+    zonas = RECORRIDO[:]
+    random.Random(semilla).shuffle(zonas)
+    carpeta = os.path.dirname(os.path.abspath(destino))
+    dur = max(DURACION_APERTURA + DURACION_CIERRE + 2, duracion_segundos(audio))
+    _copiar(audio, os.path.join(carpeta, "_a.mp3"))
+    img = ImageOps.exif_transpose(Image.open(portada)).convert("RGB")
+    _tarjeta(img, os.path.join(carpeta, "_apertura.jpg"), gancho, cierre=False)
+    _tarjeta(img, os.path.join(carpeta, "_cierre.jpg"), gancho, cierre=True)
+    _texto_superior(os.path.join(carpeta, "_texto.png"), gancho, look)
+
+    # Tomas del cuerpo: ~4 s cada una, repartidas para que todo dure exactamente lo del audio.
+    cuerpo = dur - DURACION_APERTURA - DURACION_CIERRE
+    n = max(2, min(len(zonas) * 3, round(cuerpo / cfg["toma"])))
+    piezas = 2 + n
+    # Cada fundido se come FUNDIDO segundos: se suman para que el total cuadre con el audio.
+    largo_toma = (cuerpo + fundido * (piezas - 1) - fundido * 2) / n
+    largos = [DURACION_APERTURA + fundido / 2] + [largo_toma] * n + [DURACION_CIERRE + fundido / 2]
+    ajuste = dur - (sum(largos) - fundido * (piezas - 1))
+    largos[-1] += ajuste
+
+    entradas = ["-i", "_a.mp3", "-loop", "1", "-framerate", "30", "-t", f"{largos[0]:.3f}", "-i", "_apertura.jpg"]
+    filtros = ["[1:v]scale=1080:1920,setsar=1,format=yuv420p[p0]"]
+    for k in range(n):
+        zona = zonas[k % len(zonas)]
+        sig = zonas[(k + 1) % len(zonas)]
+        nombre = f"_toma{k}.jpg"
+        (x0, x1), (y0, y1) = _toma(img, zona, sig, os.path.join(carpeta, nombre), cfg["escala"])
+        d = largos[k + 1]
+        entradas += ["-loop", "1", "-framerate", "30", "-t", f"{d:.3f}", "-i", nombre]
+        filtros.append(
+            f"[{k + 2}:v]crop=1080:1920:x='{x0}+({x1}-{x0})*t/{d:.3f}':y='{y0}+({y1}-{y0})*t/{d:.3f}',"
+            f"setsar=1,{cfg['color']}format=yuv420p[p{k + 1}]"
+        )
+    entradas += ["-loop", "1", "-framerate", "30", "-t", f"{largos[-1]:.3f}", "-i", "_cierre.jpg"]
+    filtros.append(f"[{n + 2}:v]scale=1080:1920,setsar=1,format=yuv420p[p{n + 1}]")
+    entradas += ["-loop", "1", "-framerate", "30", "-i", "_texto.png"]
+    capa = n + 3
+
+    # Fundidos encadenados.
+    previo, t = "[p0]", largos[0] - fundido
+    for k in range(1, piezas):
+        salida = f"[x{k}]"
+        trans = "fade" if k in (1, piezas - 1) else cfg["transiciones"][(k + semilla) % len(cfg["transiciones"])]
+        filtros.append(f"{previo}[p{k}]xfade=transition={trans}:duration={fundido}:offset={t:.3f}{salida}")
+        previo = salida
+        t += largos[k] - fundido
+    # Texto fijo arriba solo durante el cuerpo.
+    inicio_c, fin_c = largos[0] - fundido / 2, dur - largos[-1] + fundido / 2
+    filtros.append(f"[{capa}:v]format=rgba[txt]")
+    filtros.append(f"{previo}[txt]overlay=0:0:enable='between(t,{inicio_c:.2f},{fin_c:.2f})':shortest=0[v1]")
+    salida = "[v1]"
+    if subtitulos:
+        nombre_subs = "_s" + os.path.splitext(subtitulos)[1].lower()
+        _copiar(subtitulos, os.path.join(carpeta, nombre_subs))
+        filtros.append(f"[v1]subtitles={nombre_subs}[v2]")
+        salida = "[v2]"
+    _correr(
+        [
+            *entradas,
+            "-filter_complex", ";".join(filtros),
+            "-map", salida, "-map", "0:a",
+            "-t", f"{dur:.2f}",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-pix_fmt", "yuv420p",
+            "-r", "30", "-g", "60",
+            "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-movflags", "+faststart",
+            os.path.basename(destino),
+        ],
+        cwd=carpeta,
+    )

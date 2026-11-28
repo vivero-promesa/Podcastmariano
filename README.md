@@ -32,7 +32,7 @@ Cada tarea se hace en un solo lugar. Los enfoques, la investigación, el guion, 
 | Lunes | Documento(s), enfoque, investigación, guion, las dos aprobaciones y guardar en el historial | Estudio de producción |
 | Martes | Grabar con tu voz | Tu micrófono |
 | Miércoles | Clips y capítulos; eliges los 3 mejores | Estudio de Redes |
-| Jueves | Dejar los 3 clips listos para viernes, lunes y miércoles a las 7:00 p. m. | Instagram: botón 📅 de la app (sale solo). TikTok: TikTok Studio |
+| Jueves | Armar los 3 clips (🎬 Clips → 📦 Enviar a aprobación) y aprobarlos (🗓️ Planeación → ✅ Aprobar la semana) | Instagram sale solo viernes, lunes y miércoles a las 7:00 p. m. TikTok: TikTok Studio desde el mismo panel |
 | Viernes | Publicar en Spotify (6:00 a. m.) y poner el enlace del episodio en las bios | Spotify for Creators, Instagram, TikTok |
 | Fin de semana | Responder comentarios | Instagram, TikTok, Spotify |
 
@@ -125,7 +125,9 @@ python main.py
 
 ## Instagram automático
 
-El botón 📅 **Programar en Instagram** guarda el clip en una cola y GitHub Actions lo publica a su hora, aunque la app esté dormida. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
+**Estilo de los clips:** por defecto «Recorrido por la portada» — abre con la portada cuadrada del episodio y la pregunta, la cámara recorre sus detalles con la pregunta fija arriba y cierra con «Episodio completo en mi perfil». Se sube la portada una vez en 🎬 Clips. El estilo «Clásico» (onda de sonido) sigue disponible. Para que no se repitan, el estilo tiene tres looks (Suave, Pulso y Cine) que rotan solos por clip y por semana, cada uno con su propio recorrido de cámara; se pueden elegir a mano. En cada clip y en el carrusel hay una caja **🎙️ Pídeme un ajuste**: se dice por micrófono o se escribe («cambia la pregunta», «usa el look Cine», «empieza 3 segundos antes») y el video se rehace solo. Cada clip muestra una revisión automática (pregunta, duración, pregunta al público, llamado al perfil) y la búsqueda de momentos usa las preguntas sin usar del banco de Ideas.
+
+**Un solo hilo con aprobación:** en 🎬 Clips, **📦 Enviar a aprobación** sube el video y sus textos a la cola como «por aprobar» (GitHub Actions nunca publica algo sin aprobar). En 🗓️ Planeación, el panel **✅ Aprobar la semana** muestra los 3 videos con sus textos de Instagram (editables) y TikTok; al aprobar, GitHub Actions los publica a su hora aunque la app esté dormida y el calendario se marca solo. La pestaña **🚦 ¿Se cumple?** compara el calendario con lo que de verdad salió. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
 
 La tarea corre viernes, lunes y miércoles desde las 7:05 p. m. y reintenta durante la noche. Si algo falla, GitHub avisa por correo y la app muestra el error. TikTok no permite este automático para apps propias: los clips se programan el jueves en TikTok Studio.
 

@@ -1,11 +1,19 @@
-"""Pestaña «Planeación» del Estudio de Redes: estrategia, calendario de 12 semanas,
-plan de los 3 clips, lista del viernes, métricas y banco de ideas."""
-from datetime import date, timedelta
+"""Pestaña «Planeación» del Estudio de Redes: aprobar la semana, ¿se cumple el calendario?,
+estrategia, calendario de 12 semanas, plan de los 3 clips, lista del viernes, métricas y banco de ideas.
+
+Un solo hilo: Clips arma → aquí se aprueba → la tarea de GitHub publica en Instagram → el
+calendario se marca solo. La cola (cola_instagram.json) es la fuente de verdad de Instagram."""
+import calendar
+import os
+import tempfile
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 import streamlit as st
 
 import config
+from agents import cola
+from agents import publicar_redes as pub
 from agents import historial as hist
 from agents import planeacion as plan_mod
 
@@ -50,6 +58,258 @@ def _fecha_bonita(iso: str) -> str:
     return f"{d.day} {meses[d.month - 1]} {d.year}"
 
 
+def _cola() -> dict:
+    """La cola por id de clip (misma caché que la pestaña Clips)."""
+    if st.session_state.get("cola_ig") is None:
+        if not hist.puede_guardar():
+            return {}
+        try:
+            st.session_state.cola_ig = {c["id"]: c for c in cola.leer()[0].get("clips", [])}
+        except Exception as e:
+            st.warning(f"No pude leer la cola de Instagram: {e}")
+            return {}
+    return st.session_state.cola_ig
+
+
+def _marcar_tiktok(fecha: str, indice: int, clave: str):
+    """Guarda al instante la marca «Ya lo programé en TikTok Studio»."""
+    plan = _plan()
+    semana = next((s for s in plan["semanas"] if s["fecha"] == fecha), None)
+    if semana:
+        plan_mod.marcar_tiktok(semana, indice, bool(st.session_state.get(clave)))
+        _guardar(f"Planeación: TikTok clip {indice + 1} ({fecha})")
+
+
+def _publicar_ahora(cid: str, item: dict, semana: dict, indice: int, red: str):
+    """🚀 Publica ya el clip (Instagram o TikTok) con el video y el texto aprobados."""
+    with st.status(f"Publicando en {red}…", expanded=True) as estado:
+        try:
+            with tempfile.TemporaryDirectory() as carpeta:
+                mp4 = cola.descargar(item["video"]["url"], os.path.join(carpeta, "clip.mp4"))
+                if red == "Instagram":
+                    portada = None
+                    if item.get("portada"):
+                        portada = cola.descargar(item["portada"]["url"], os.path.join(carpeta, "portada.jpg"))
+                    r = pub.publicar_instagram(mp4, st.session_state.get(f"apr_ig_{cid}", item.get("texto", "")),
+                                               portada, avisar=st.write)
+                    cola.marcar_publicado(cid, r["enlace"])
+                    plan_mod.marcar_clip(semana, indice, "Publicado")
+                    st.write(f"✅ Publicado → {r['enlace']}")
+                else:
+                    r = pub.publicar_tiktok(mp4, item.get("texto_tiktok", ""), avisar=st.write)
+                    if r["modo"] == "directo":
+                        plan_mod.marcar_tiktok(semana, indice)
+                        st.write(f"✅ TikTok: publicado ({r['privacidad']})")
+                    else:
+                        st.write("✅ Llegó a tu bandeja de TikTok: ábrela, agrega el sonido y publica.")
+            _guardar(f"Planeación: clip {indice + 1} publicado en {red} ({semana['fecha']})")
+            st.session_state.cola_ig = None
+            estado.update(label=f"Listo en {red}", state="complete")
+        except Exception as e:
+            st.error(str(e))
+            estado.update(label=f"No se pudo publicar en {red}", state="error")
+
+
+# Colores del calendario: (fondo, texto)
+COLORES = {
+    "publicado": ("#1f7a4d", "#ffffff"), "programado": ("#2457a6", "#ffffff"), "borrador": ("#b7861f", "#1d1b2f"),
+    "fallo": ("#a33a3a", "#ffffff"), "pendiente": ("#4a4760", "#e8e6f0"), "spotify": ("#5b3fa3", "#ffffff"),
+}
+
+
+def _tipo(texto_estado: str) -> str:
+    if texto_estado.startswith("✅"):
+        return "publicado"
+    if texto_estado.startswith("📅"):
+        return "programado"
+    if texto_estado.startswith(("🟡", "⏳")):
+        return "borrador"
+    if texto_estado.startswith(("🔴", "❌")):
+        return "fallo"
+    return "pendiente"
+
+
+def _calendario_mes(plan: dict):
+    """El mes en cuadrícula: episodio de Spotify y cada clip con su estado real (cola + plan)."""
+    hoy = date.today()
+    st.session_state.setdefault("mes_cal", (hoy.year, hoy.month))
+    anio, mes = st.session_state.mes_cal
+    a, b, c = st.columns([1, 3, 1])
+    if a.button("◀ Mes anterior", key="mes_ant"):
+        anio, mes = (anio - 1, 12) if mes == 1 else (anio, mes - 1)
+        st.session_state.mes_cal = (anio, mes)
+        st.rerun()
+    if c.button("Mes siguiente ▶", key="mes_sig"):
+        anio, mes = (anio + 1, 1) if mes == 12 else (anio, mes + 1)
+        st.session_state.mes_cal = (anio, mes)
+        st.rerun()
+    nombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre",
+               "Octubre", "Noviembre", "Diciembre"]
+    b.markdown(f"<h3 style='text-align:center;margin:0'>{nombres[mes - 1]} {anio}</h3>", unsafe_allow_html=True)
+
+    ahora = datetime.now(timezone.utc)
+    por_id = _cola()
+    eventos = {}
+    for sem in plan.get("semanas", []):
+        if not sem.get("fecha"):
+            continue
+        eventos.setdefault(sem["fecha"], []).append(
+            ("spotify", f"Spotify · {sem.get('estado', 'Por producir')}", sem.get("enfoque", "")))
+        for clip in plan_mod.clips_de_semana(sem):
+            real = plan_mod.estado_real(sem, clip, por_id.get(plan_mod.id_clip(sem["fecha"], clip["clip"])), ahora)
+            eventos.setdefault(clip["fecha"], []).append(
+                (_tipo(real["instagram"]), f"Clip {clip['clip']} · IG · {real['instagram'].split(' ', 1)[-1]}",
+                 f"{clip['pilar']} — {real['instagram']}"))
+            if real["tiktok"].startswith("✅"):
+                eventos[clip["fecha"]].append(("publicado", f"Clip {clip['clip']} · TikTok", "Programado en TikTok"))
+
+    celdas = []
+    for semana in calendar.Calendar(firstweekday=0).monthdatescalendar(anio, mes):
+        fila = []
+        for d in semana:
+            chips = "".join(
+                f"<div title='{detalle.replace(chr(39), '')}' style='background:{COLORES[t][0]};color:{COLORES[t][1]};border-radius:6px;"
+                f"padding:2px 6px;margin-top:3px;font-size:11px;line-height:1.3'>{texto}</div>"
+                for t, texto, detalle in eventos.get(d.isoformat(), [])
+            )
+            borde = "2px solid #f0c46e" if d == hoy else "1px solid rgba(255,255,255,0.12)"
+            opaco = "1" if d.month == mes else "0.35"
+            fila.append(f"<td style='vertical-align:top;border:{borde};padding:6px;height:96px;width:14.28%;opacity:{opaco}'>"
+                        f"<div style='font-size:12px;font-weight:600'>{d.day}</div>{chips}</td>")
+        celdas.append("<tr>" + "".join(fila) + "</tr>")
+    cabecera = "".join(f"<th style='padding:4px;font-size:12px'>{n}</th>" for n in ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"])
+    st.markdown(f"<table style='width:100%;border-collapse:collapse;table-layout:fixed'><tr>{cabecera}</tr>{''.join(celdas)}</table>",
+                unsafe_allow_html=True)
+    leyenda = " ".join(
+        f"<span style='background:{COLORES[k][0]};color:{COLORES[k][1]};border-radius:6px;padding:2px 8px;font-size:12px'>{n}</span>"
+        for k, n in (("publicado", "Publicado"), ("programado", "Aprobado, sale solo"), ("borrador", "Borrador por aprobar"),
+                     ("fallo", "No salió"), ("pendiente", "Sin armar"), ("spotify", "Episodio Spotify (manual)"))
+    )
+    st.markdown(f"<div style='margin-top:8px'>{leyenda}</div>", unsafe_allow_html=True)
+
+
+def _panel_aprobacion(plan: dict):
+    """Lo que se hace el jueves, en un solo lugar: revisar lo armado, aprobar y dejar TikTok listo."""
+    semana = plan_mod.semana_para_clips(plan)
+    if not semana:
+        return
+    clips = plan_mod.clips_de_semana(semana)
+    en_cola = _cola()
+    with st.container(border=True):
+        jueves = date.fromisoformat(semana["fecha"]) - timedelta(days=1)
+        st.markdown(f"### ✅ Aprobar la semana · jueves {_fecha_bonita(jueves.isoformat())}")
+        st.caption(
+            "Nada sale sin tu aprobación. Revisa cada video y su texto; al aprobar, Instagram publica solo "
+            f"a las {plan_mod.HORA_CLIPS} de cada día. TikTok: descarga el video, copia su texto y prográmalo en TikTok Studio."
+        )
+        if not hist.puede_guardar():
+            st.warning("Falta GITHUB_TOKEN en los Secrets: sin él no se puede armar ni aprobar.")
+            return
+        textos, por_aprobar = {}, 0
+        columnas = st.columns(len(clips))
+        for i, (col, c) in enumerate(zip(columnas, clips)):
+            cid = plan_mod.id_clip(semana["fecha"], c["clip"])
+            item = en_cola.get(cid)
+            with col:
+                st.markdown(f"**Clip {c['clip']} · {c['pilar']}**  \n{c['dia']} {_fecha_bonita(c['fecha'])}, {c['hora']}")
+                if not item:
+                    st.info("⚪ Falta armarlo en 🎬 Clips del episodio.")
+                    continue
+                estado = item["estado"]
+                st.caption(plan_mod.ICONOS.get(estado, estado))
+                if estado == "publicado":
+                    st.markdown(f"[Ver en Instagram]({item['enlace']})")
+                else:
+                    st.video(item["video"]["url"])
+                if item.get("gancho"):
+                    st.markdown(f"Gancho: «{item['gancho']}»")
+                if estado == "por_aprobar":
+                    for ok, regla in plan_mod.revision_clip(item.get("gancho", ""), item.get("texto", ""),
+                                                            item.get("texto_tiktok", ""), item.get("duracion", 0)):
+                        st.caption(("✅ " if ok else "⚠️ ") + regla)
+                if estado == "por_aprobar":
+                    por_aprobar += 1
+                    textos[cid] = st.text_area("Texto de Instagram", value=item.get("texto", ""), height=160, key=f"apr_ig_{cid}")
+                elif estado != "publicado":
+                    with st.expander("Texto de Instagram"):
+                        st.write(item.get("texto", ""))
+                if item.get("error"):
+                    st.warning(f"Último intento: {item['error']}")
+                # TikTok
+                st.markdown("**TikTok**")
+                if item.get("texto_tiktok"):
+                    st.code(item["texto_tiktok"], language=None)
+                if estado != "publicado":
+                    st.link_button("⬇️ Video para TikTok", item["video"]["url"], key=f"apr_dl_{cid}")
+                st.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"apr_tt_{cid}")
+                clave_tt = f"apr_ttok_{cid}"
+                st.caption("Al subirlo: marca la etiqueta de contenido generado con IA y agrega un sonido en tendencia "
+                           "de la biblioteca de TikTok a volumen muy bajo (5-10 %), debajo de tu voz.")
+                st.checkbox("Ya lo programé en TikTok Studio", value=c["tiktok"], key=clave_tt,
+                            on_change=_marcar_tiktok, args=(semana["fecha"], i, clave_tt))
+                if estado in ("por_aprobar", "pendiente", "error"):
+                    st.markdown("**🚀 Publicar ahora**")
+                    b1, b2 = st.columns(2)
+                    if b1.button("Instagram", key=f"apr_pub_ig_{cid}", disabled=not pub.instagram_configurado(),
+                                 help=None if pub.instagram_configurado() else "Falta INSTAGRAM_TOKEN en los Secrets."):
+                        _publicar_ahora(cid, item, semana, i, "Instagram")
+                    if b2.button("TikTok", key=f"apr_pub_tt_{cid}", disabled=not pub.tiktok_configurado(),
+                                 help=None if pub.tiktok_configurado() else "Conecta TikTok en 🎬 Clips → 🔌 Conexión."):
+                        _publicar_ahora(cid, item, semana, i, "TikTok")
+                if estado in ("por_aprobar", "pendiente", "error") and st.button("↩️ Devolver (rehacer en Clips)", key=f"apr_dev_{cid}"):
+                    try:
+                        cola.cancelar(cid)
+                        plan_mod.marcar_clip(semana, i, "Por hacer")
+                        _guardar(f"Planeación: clip {c['clip']} devuelto ({semana['fecha']})")
+                        st.session_state.cola_ig = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(str(e))
+        if st.button(f"✅ Aprobar la semana ({por_aprobar} clip{'s' if por_aprobar != 1 else ''} armado{'s' if por_aprobar != 1 else ''})",
+                     type="primary", disabled=not por_aprobar, key="aprobar_semana"):
+            try:
+                aprobados, fuera = cola.aprobar(textos)
+            except Exception as e:
+                st.error(f"No pude aprobar: {e}")
+                return
+            for i, c in enumerate(clips):
+                if plan_mod.id_clip(semana["fecha"], c["clip"]) in aprobados:
+                    plan_mod.marcar_clip(semana, i, "Programado")
+            if aprobados:
+                _guardar(f"Planeación: semana {semana['fecha']} aprobada")
+            for cid, motivo in fuera:
+                st.warning(f"{cid}: {motivo}")
+            st.session_state.cola_ig = None
+            if aprobados and not fuera:
+                st.rerun()
+
+
+def _cumplimiento(plan: dict):
+    """¿Se cumple el calendario? Lo real de la cola + el plan, semana por semana."""
+    datos = plan_mod.cumplimiento(plan, list(_cola().values()))
+    if datos["total"]:
+        m1, m2, m3 = st.columns(3)
+        m1.metric(f"Instagram a tiempo (últimas {datos['semanas']} semanas)", f"{datos['instagram']} de {datos['total']}")
+        m2.metric("TikTok programado", f"{datos['tiktok']} de {datos['total']}")
+        pct = round(100 * datos["instagram"] / datos["total"])
+        m3.metric("Cumplimiento Instagram", f"{pct} %")
+    filas = []
+    for f in reversed(datos["filas"]):
+        c = f["clips"]
+        filas.append({
+            "Viernes": _fecha_bonita(f["fecha"]), "Episodio": f["episodio"], "Enfoque": f["enfoque"],
+            "Vie (IG)": c[0]["instagram"], "Lun (IG)": c[1]["instagram"], "Mié (IG)": c[2]["instagram"],
+            "TikTok vie·lun·mié": " · ".join(x["tiktok"][:1] for x in c),
+        })
+    if filas:
+        st.dataframe(pd.DataFrame(filas), hide_index=True, width="stretch")
+    st.caption(
+        "Instagram se lee de la cola real (lo que publicó el agente de GitHub). 🔴 = su hora pasó y no salió. "
+        "Si un clip lo subiste a mano, márcalo en «Plan de la semana» → Estado: Publicado. "
+        "TikTok: ✅ programado · ⚪ por hacer · 🔴 no salió."
+    )
+
+
 def mostrar():
     por_clave = _catalogo()
     plan = _plan()
@@ -57,42 +317,44 @@ def mostrar():
     st.subheader("🗓️ Planeación del podcast y las redes")
     st.caption(
         "Un episodio cada viernes, agrupados en series de 4. Cada semana, 3 clips (uno por pilar), "
-        f"el mismo archivo en Instagram y TikTok, para las {plan_mod.HORA_CLIPS} El jueves los dejas programados: Instagram sale solo desde la app y TikTok desde TikTok Studio."
+        f"el mismo archivo en Instagram y TikTok, para las {plan_mod.HORA_CLIPS} Un solo hilo: 🎬 Clips arma → aquí apruebas el jueves → "
+        "Instagram sale solo y el calendario se marca solo. TikTok lo programas en TikTok Studio desde este mismo panel."
     )
 
     # ── Esta semana ──
     actual = plan_mod.semana_actual(plan)
-    if actual:
-        siguiente = plan_mod.siguiente_de(plan, actual)
+    proxima = plan_mod.semana_para_clips(plan)
+    if proxima:
+        siguiente = plan_mod.siguiente_de(plan, proxima)
         with st.container(border=True):
             c1, c2 = st.columns([3, 1])
             with c1:
                 st.markdown(
-                    f"**Próximo episodio · viernes {_fecha_bonita(actual['fecha'])}**  \n"
-                    f"{actual['serie']} {actual.get('parte', '')} — **{actual['enfoque'] or 'enfoque por definir'}**  \n"
-                    f"Documento: {_nombre_doc(actual.get('documentos'), por_clave)}"
-                    + (" · 🎤 con invitado" if actual.get("invitado") else "")
+                    f"**Próximo episodio · viernes {_fecha_bonita(proxima['fecha'])}**  \n"
+                    f"{proxima['serie']} {proxima.get('parte', '')} — **{proxima['enfoque'] or 'enfoque por definir'}**  \n"
+                    f"Documento: {_nombre_doc(proxima.get('documentos'), por_clave)}"
+                    + (" · 🎤 con invitado" if proxima.get("invitado") else "")
                 )
                 if siguiente:
                     st.caption(f"Avance para el cierre del episodio: «El próximo viernes: {siguiente['enfoque']}».")
-            c2.metric("Estado", actual.get("estado", "Por producir"))
-            jueves = date.fromisoformat(actual["fecha"]) - timedelta(days=1)
-            st.markdown(f"**Tu jueves {_fecha_bonita(jueves.isoformat())}: programa estos 3 clips**")
-            filas_jueves = [
-                {
-                    "Clip": c["clip"], "Pilar": c["pilar"], "Sale": f"{c['dia']} {_fecha_bonita(c['fecha'])}",
-                    "Hora": c["hora"], "Instagram": c["estado"], "TikTok": "Programado" if c["tiktok"] else "Por hacer",
-                }
-                for c in plan_mod.clips_de_semana(actual)
-            ]
-            st.dataframe(pd.DataFrame(filas_jueves), hide_index=True, width="stretch")
-            st.caption(f"Episodio en Spotify: viernes {_fecha_bonita(actual['fecha'])}, {plan_mod.HORA_SPOTIFY}")
+            c2.metric("Estado", proxima.get("estado", "Por producir"))
+            st.caption(f"Episodio en Spotify: viernes {_fecha_bonita(proxima['fecha'])}, {plan_mod.HORA_SPOTIFY} (manual)")
+        _panel_aprobacion(plan)
     else:
         st.info("El calendario no tiene semanas próximas. Agrega semanas en «Calendario».")
 
-    t_cal, t_sem, t_vie, t_met, t_ide, t_est = st.tabs(
-        ["📅 Calendario", "🎬 Plan de la semana", "✅ Lista del viernes", "📈 Métricas", "💡 Ideas", "🧭 Estrategia"]
+    t_mes, t_cum, t_cal, t_sem, t_vie, t_met, t_ide, t_est = st.tabs(
+        ["📆 Mes", "🚦 ¿Se cumple?", "📅 Calendario", "🎬 Plan de la semana", "✅ Lista del viernes", "📈 Métricas",
+         "💡 Ideas", "🧭 Estrategia"]
     )
+
+    # ── Calendario visual del mes ──
+    with t_mes:
+        _calendario_mes(plan)
+
+    # ── ¿Se cumple el calendario? ──
+    with t_cum:
+        _cumplimiento(plan)
 
     # ── Calendario ──
     with t_cal:
@@ -159,11 +421,11 @@ def mostrar():
         if not fechas:
             st.info("Primero agrega semanas al calendario.")
         else:
-            defecto = fechas.index(actual["fecha"]) if actual else 0
+            defecto = fechas.index(proxima["fecha"]) if proxima else 0
             elegida = st.selectbox("Semana", fechas, index=defecto, format_func=_fecha_bonita, key="semana_clips")
             semana = next(s for s in plan["semanas"] if s["fecha"] == elegida)
             st.markdown(f"**{semana['serie']} {semana.get('parte', '')} — {semana['enfoque'] or 'enfoque por definir'}**")
-            st.caption("Los 3 momentos salen de los [CLIP] del guion aprobado y del Estudio de Redes (pestaña Clips).")
+            st.caption("El gancho y el estado se llenan solos cuando armas y apruebas los clips. Aquí solo planeas con anticipación o corriges a mano.")
             clips = semana.get("clips") or [""] * len(plan_mod.PILARES)
             detalle = plan_mod.clips_de_semana(semana)
             nuevos = []
@@ -291,8 +553,8 @@ def mostrar():
             "siguiente.\n\n"
             "**Ritmo semanal**\n"
             f"- Viernes: episodio en Spotify ({plan_mod.HORA_SPOTIFY}) + clip 1 ({plan_mod.HORA_CLIPS}).\n"
-            f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS} Los 3 se programan el jueves anterior.\n"
-            "- El mismo archivo va a Instagram (prioridad, sale solo desde la app) y TikTok (programado en TikTok Studio). "
+            f"- Lunes: clip 2 · Miércoles: clip 3, ambos a las {plan_mod.HORA_CLIPS} Los 3 se arman y se aprueban el jueves anterior.\n"
+            "- El mismo archivo va a Instagram (prioridad, sale solo tras tu aprobación) y TikTok (programado en TikTok Studio). "
             "Sin carruseles ni Historias diarias.\n\n"
             "**Los 3 pilares (un clip de cada uno por semana)**"
         )

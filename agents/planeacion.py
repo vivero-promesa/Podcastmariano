@@ -10,7 +10,7 @@ import base64
 import json
 import os
 import tempfile
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 import requests
@@ -22,7 +22,9 @@ RAMA = "borradores"
 RUTA_LOCAL = os.path.join(tempfile.gettempdir(), ARCHIVO)
 
 ESTADOS = ["Por producir", "Investigación", "Guion listo", "Grabado", "Publicado"]
-ESTADOS_CLIP = ["Por hacer", "Programado", "Publicado"]
+# Un solo hilo por clip: Por hacer → Por aprobar (armado en Clips) → Programado (aprobado, sale solo) → Publicado.
+ESTADOS_CLIP = ["Por hacer", "Por aprobar", "Programado", "Publicado"]
+ZONA_BOGOTA = timezone(timedelta(hours=-5))
 
 # Horario único del podcast: lo usan la app y el mensaje de los jueves. Si cambia, se cambia aquí.
 HORA_SPOTIFY = "6:00 a. m."
@@ -73,7 +75,7 @@ LISTA_VIERNES = [
     "Episodio subido a Spotify for Creators con título y descripción de la app",
     "Capítulos con minutos agregados a la descripción de Spotify",
     "Enlace de la bio de Instagram y TikTok cambiado al episodio nuevo",
-    "Los 3 clips programados el jueves: Instagram desde la app y TikTok en TikTok Studio",
+    "Los 3 clips armados y aprobados el jueves (Instagram sale solo) y TikTok programado en TikTok Studio",
     "Episodio guardado en el historial de la app",
     "Responder comentarios del fin de semana",
 ]
@@ -286,3 +288,125 @@ def agregar_semana(plan: dict) -> dict:
     plan["semanas"].append(nueva)
     _numerar_series(plan["semanas"])
     return nueva
+
+
+# ─────────────────────────── Un solo hilo: semana de clips y cumplimiento ───────────────────────────
+def momento_clip(fecha_iso: str) -> datetime:
+    """Fecha del clip a la hora única de publicación, en hora de Colombia."""
+    hora, minuto = HORA_CLIPS_24
+    d = date.fromisoformat(fecha_iso)
+    return datetime(d.year, d.month, d.day, hora, minuto, tzinfo=ZONA_BOGOTA)
+
+
+def semana_para_clips(plan: dict, ahora: Optional[datetime] = None) -> Optional[dict]:
+    """La semana a la que le toca armar clips: la primera cuyo clip 1 todavía no ha salido.
+    El jueves es el viernes siguiente; el viernes después de las 7:00 p. m. ya es la otra semana."""
+    ahora = ahora or datetime.now(timezone.utc)
+    for s in plan.get("semanas", []):
+        if s.get("fecha") and momento_clip(s["fecha"]) > ahora:
+            return s
+    return None
+
+
+def guardar_gancho(semana: dict, indice: int, gancho: str) -> None:
+    """Anota en el plan el gancho real del clip armado (así no se escribe dos veces)."""
+    ganchos = [c["gancho"] for c in clips_de_semana(semana)]
+    if 0 <= indice < len(ganchos):
+        ganchos[indice] = gancho
+        semana["clips"] = ganchos
+
+
+def id_clip(semana_fecha: str, clip: int) -> str:
+    """Mismo identificador que usa la cola de Instagram."""
+    return f"{semana_fecha}-clip{clip}"
+
+
+# Estado de cada clip en Instagram, tal como lo ve la cola (la fuente de verdad).
+ICONOS = {
+    "publicado": "✅ Publicado",
+    "pendiente": "📅 Aprobado, sale solo",
+    "por_aprobar": "🟡 Por aprobar",
+    "publicando": "⏳ Publicando",
+    "error": "❌ Falló",
+}
+
+
+def estado_real(semana: dict, clip: dict, item: Optional[dict], ahora: datetime) -> dict:
+    """Une calendario y cola en un solo estado para un clip.
+    Devuelve {'instagram': texto, 'a_tiempo': True/False/None, 'tiktok': texto}."""
+    paso = momento_clip(clip["fecha"]) <= ahora
+    if item:
+        estado = item.get("estado", "")
+        texto = ICONOS.get(estado, estado)
+        if estado == "por_aprobar" and paso:
+            texto, a_tiempo = "🔴 No se aprobó a tiempo", False
+        elif estado == "pendiente" and ahora > momento_clip(clip["fecha"]) + timedelta(hours=4):
+            # La tarea de GitHub corre de 7:05 a 10:45 p. m.: si sigue pendiente, no salió.
+            texto, a_tiempo = "🔴 Aprobado pero no salió (revisa GitHub → Actions)", False
+        elif estado == "error":
+            a_tiempo = False
+        elif estado == "publicado":
+            a_tiempo = True
+        else:
+            a_tiempo = None
+    elif clip["estado"] == "Publicado":
+        texto, a_tiempo = "✅ Publicado (a mano)", True
+    elif paso:
+        texto, a_tiempo = "🔴 No salió", False
+    else:
+        texto, a_tiempo = "⚪ Sin armar", None
+    if clip["tiktok"]:
+        tiktok = "✅ Programado"
+    elif paso:
+        tiktok = "🔴 No salió"
+    else:
+        tiktok = "⚪ Por hacer"
+    return {"instagram": texto, "a_tiempo": a_tiempo, "tiktok": tiktok}
+
+
+def cumplimiento(plan: dict, cola_clips: List[dict], ahora: Optional[datetime] = None,
+                 semanas_atras: int = 4) -> dict:
+    """¿Se cumple el calendario? Una fila por semana (desde la primera hasta la próxima)
+    y el resumen de las últimas semanas ya cerradas."""
+    ahora = ahora or datetime.now(timezone.utc)
+    por_id = {c.get("id"): c for c in cola_clips or []}
+    filas, cerradas = [], []
+    for s in plan.get("semanas", []):
+        if not s.get("fecha"):
+            continue
+        viernes = momento_clip(s["fecha"])
+        if viernes - timedelta(days=7) > ahora:  # solo hasta la semana que viene
+            break
+        clips = clips_de_semana(s)
+        reales = [estado_real(s, c, por_id.get(id_clip(s["fecha"], c["clip"])), ahora) for c in clips]
+        fila = {"fecha": s["fecha"], "enfoque": s.get("enfoque", ""), "episodio": s.get("estado", "Por producir"),
+                "clips": reales}
+        filas.append(fila)
+        if momento_clip(clips[-1]["fecha"]) <= ahora:  # el miércoles ya pasó: semana cerrada
+            cerradas.append(fila)
+    ultimas = cerradas[-semanas_atras:]
+    total = sum(len(f["clips"]) for f in ultimas)
+    ig = sum(1 for f in ultimas for c in f["clips"] if c["a_tiempo"])
+    tt = sum(1 for f in ultimas for c in f["clips"] if c["tiktok"].startswith("✅"))
+    return {"filas": filas, "semanas": len(ultimas), "total": total, "instagram": ig, "tiktok": tt}
+
+
+# ─────────────────────────── Revisión automática del clip ───────────────────────────
+LLAMADO = "Episodio completo en mi perfil"
+
+
+def revision_clip(gancho: str, texto_ig: str, texto_tt: str, duracion: float = 0) -> List[tuple]:
+    """Las reglas del 24 nov 2026, comprobadas solas: [(cumple, regla), …]."""
+    g = (gancho or "").strip()
+    cuerpo_ig = (texto_ig or "").split("🎧")[0]
+    cuerpo_tt = (texto_tt or "").split("🎧")[0]
+    reglas = [
+        (g.startswith("¿") and g.endswith("?") and len(g.split()) <= 9,
+         "Pregunta directa en pantalla desde el segundo 0 (¿…?, máx. 8-9 palabras)"),
+        ("?" in cuerpo_ig, "Instagram cierra con una pregunta al público"),
+        ("?" in cuerpo_tt, "TikTok cierra con una pregunta al público"),
+        (LLAMADO in (texto_ig or "") and LLAMADO in (texto_tt or ""), f"«{LLAMADO}» en los dos textos"),
+    ]
+    if duracion:
+        reglas.insert(1, (30 <= duracion <= 92, f"Duración entre 30 y 90 s (tiene {duracion:.0f} s)"))
+    return reglas

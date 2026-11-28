@@ -4,6 +4,9 @@ Los videos se guardan como archivos de un lanzamiento de GitHub (etiqueta «cola
 y la lista vive en cola_instagram.json, en la rama «borradores». Una tarea de GitHub Actions
 (.github/workflows/publicar-instagram.yml) revisa la cola y publica lo que ya toca, aunque la
 app de Streamlit esté dormida. Al publicar, el video se borra del lanzamiento.
+
+Un solo hilo con aprobación: el clip armado entra como «por_aprobar» (la tarea de GitHub NUNCA
+lo publica); solo cuando Elena aprueba la semana pasa a «pendiente» y sale solo a su hora.
 """
 import base64
 import json
@@ -35,9 +38,7 @@ def _revisar(r: requests.Response, que: str):
 
 def momento_de_publicar(fecha_iso: str) -> datetime:
     """Fecha del clip a la hora del horario único, en hora de Colombia."""
-    hora, minuto = plan_mod.HORA_CLIPS_24
-    anio, mes, dia = (int(p) for p in fecha_iso.split("-"))
-    return datetime(anio, mes, dia, hora, minuto, tzinfo=ZONA_BOGOTA)
+    return plan_mod.momento_clip(fecha_iso)
 
 
 def ya_paso(fecha_iso: str, ahora: Optional[datetime] = None) -> bool:
@@ -107,12 +108,14 @@ def descargar(url: str, destino: str) -> str:
 
 # ─────────────────────────── Programar y cancelar ───────────────────────────
 def identificador(semana_fecha: str, clip: int) -> str:
-    return f"{semana_fecha}-clip{clip}"
+    return plan_mod.id_clip(semana_fecha, clip)
 
 
 def programar(semana_fecha: str, clip: int, pilar: str, fecha_iso: str, mp4: str,
-              portada: Optional[str], texto: str, ahora: Optional[datetime] = None) -> dict:
-    """Deja un Reel en la cola. Si el clip ya estaba pendiente, lo reemplaza; nunca repite uno publicado."""
+              portada: Optional[str], texto: str, ahora: Optional[datetime] = None,
+              texto_tiktok: str = "", gancho: str = "", aprobado: bool = False, duracion: float = 0) -> dict:
+    """Deja un Reel en la cola. Por defecto queda «por_aprobar» (armado, esperando la aprobación).
+    Si el clip ya estaba en la cola sin publicar, lo reemplaza; nunca repite uno publicado."""
     if ya_paso(fecha_iso, ahora):
         raise ValueError(f"La hora de este clip ({fecha_iso}) ya pasó. Cambia la semana o publícalo con 🚀.")
     cid = identificador(semana_fecha, clip)
@@ -127,12 +130,42 @@ def programar(semana_fecha: str, clip: int, pilar: str, fecha_iso: str, mp4: str
     nuevo = {
         "id": cid, "semana": semana_fecha, "clip": clip, "pilar": pilar,
         "publicar_en": momento_de_publicar(fecha_iso).isoformat(), "video": video, "portada": foto,
-        "texto": texto, "estado": "pendiente", "intentos": 0, "enlace": "", "error": "",
+        "texto": texto, "texto_tiktok": texto_tiktok, "gancho": gancho, "fecha": fecha_iso, "duracion": round(duracion, 1),
+        "estado": "pendiente" if aprobado else "por_aprobar", "intentos": 0, "enlace": "", "error": "",
     }
     datos["clips"] = [c for c in datos["clips"] if c["id"] != cid] + [nuevo]
     datos["clips"].sort(key=lambda c: c["publicar_en"])
     escribir(datos, sha, f"Cola de Instagram: {cid}")
     return nuevo
+
+
+def aprobar(textos: dict, ahora: Optional[datetime] = None) -> Tuple[list, list]:
+    """Aprueba los clips armados: {id: texto de Instagram final}. Pasan a «pendiente» y salen solos.
+    Devuelve (aprobados, rechazados con motivo). Un clip cuya hora ya pasó no se aprueba."""
+    datos, sha = leer()
+    aprobados, fuera = [], []
+    for c in datos.get("clips", []):
+        if c["id"] not in textos or c["estado"] != "por_aprobar":
+            continue
+        if (ahora or datetime.now(timezone.utc)) >= datetime.fromisoformat(c["publicar_en"]):
+            fuera.append((c["id"], "su hora ya pasó: devuélvelo o publícalo a mano con 🚀"))
+            continue
+        if textos[c["id"]]:
+            c["texto"] = textos[c["id"]]
+        c["estado"] = "pendiente"
+        aprobados.append(c["id"])
+    if aprobados:
+        escribir(datos, sha, f"Cola de Instagram: aprobados {', '.join(aprobados)}")
+    return aprobados, fuera
+
+
+def marcar_publicado(cid: str, enlace: str = ""):
+    """Anota que el clip ya salió (publicado con 🚀 desde el panel), para que el agente no lo repita."""
+    datos, sha = leer()
+    for c in datos.get("clips", []):
+        if c["id"] == cid:
+            c.update(estado="publicado", enlace=enlace, error="")
+    escribir(datos, sha, f"Cola de Instagram: {cid} publicado a mano")
 
 
 def cancelar(cid: str):

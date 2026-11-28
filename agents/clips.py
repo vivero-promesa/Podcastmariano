@@ -23,6 +23,10 @@ class ClipPropuesto(BaseModel):
     texto_tiktok: str = Field(description="Caption para TikTok de 1 a 2 líneas, sin hashtags. Empieza con una pregunta que la gente busca y termina con una pregunta para el público que invite a comentar")
     hashtags_instagram: List[str] = Field(description="7 hashtags temáticos con #")
     hashtags_tiktok: List[str] = Field(description="3 hashtags temáticos con #")
+    pregunta_publico: str = Field(
+        default="",
+        description="Si este clip responde una de las preguntas reales del público que se te dieron, cópiala exacta; si no, déjalo vacío",
+    )
     prompt_imagen: str = Field(
         default="",
         description=(
@@ -63,11 +67,13 @@ def a_marca(segundos: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
 
 
-def analizar_episodio(ruta_mp3: str, cantidad: int = 5, contexto: str = "") -> AnalisisEpisodio:
+def analizar_episodio(ruta_mp3: str, cantidad: int = 5, contexto: str = "", preguntas: List[str] = None) -> AnalisisEpisodio:
     archivo = llm.subir_archivo(ruta_mp3, "audio/mpeg")
     pedido = f"""
 Escucha completo este episodio de «{config.PODCAST['nombre']}».
 {('Contexto: ' + contexto) if contexto else ''}
+{("Preguntas reales del público (de comentarios y mensajes). Si el episodio responde alguna, prioriza ese momento "
+  "y cópiala exacta en pregunta_publico: " + " | ".join(preguntas)) if preguntas else ''}
 
 1. Elige los {cantidad} mejores momentos para clips verticales de 30 a 90 segundos.
    Criterios virales: en los primeros 2 segundos se escucha una pregunta directa (ej.: «¿Es pecado la FIV?»);
@@ -127,7 +133,14 @@ def producir_clip(
     con_subtitulos: bool = True,
     ajuste: str = "completa",
     movimiento: bool = True,
+    estilo: str = "recorrido",
+    portada_episodio: str = None,
+    look: str = "Suave",
+    semilla: int = 0,
 ) -> dict:
+    """estilo «recorrido»: portada del episodio → recorrido de cámara por sus detalles → cierre con
+    «Episodio completo en mi perfil» (el estilo elegido por Elena). Usa la portada del episodio o, si no
+    hay, la imagen del clip. «clasico»: imagen o color de fondo con onda de sonido."""
     os.makedirs(carpeta, exist_ok=True)
     audio = os.path.join(carpeta, f"{nombre}.mp3")
     srt = os.path.join(carpeta, f"{nombre}.srt")
@@ -142,9 +155,14 @@ def producir_clip(
             video.escribir_srt(segmentos, srt)
             video.escribir_ass(segmentos, ass)
             usar_srt, usar_ass = srt, ass
-    video.hacer_video_vertical(audio, usar_ass, gancho, mp4, fondo=fondo, ajuste=ajuste, movimiento=movimiento)
+    imagen_recorrido = portada_episodio or fondo
+    if estilo == "recorrido" and imagen_recorrido:
+        video.hacer_video_recorrido(audio, usar_ass, gancho, mp4, imagen_recorrido, look=look, semilla=semilla)
+    else:
+        video.hacer_video_vertical(audio, usar_ass, gancho, mp4, fondo=fondo, ajuste=ajuste, movimiento=movimiento)
     try:
         video.portada_clip(mp4, gancho, portada, segundo=0.5)
     except Exception:
         portada = None
-    return {"mp4": mp4, "srt": usar_srt, "mp3": audio, "portada": portada, "gancho": gancho}
+    return {"mp4": mp4, "srt": usar_srt, "mp3": audio, "portada": portada, "gancho": gancho,
+            "duracion": video.duracion_segundos(audio)}
