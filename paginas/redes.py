@@ -1,5 +1,6 @@
-"""Estudio de Redes: planeación (calendario, estrategia, métricas), clips virales desde el episodio grabado, títulos para el buscador,
-carruseles para Canva y cápsulas con voz IA."""
+"""Estudio de Redes: planeación (aprobar la semana, ¿se cumple?, calendario, métricas, ideas), clips desde el
+episodio grabado y títulos para el buscador. Carrusel y cápsula con voz IA quedan guardados pero ocultos
+(en pausa por decisión del 19 oct 2026); para mostrarlos, MOSTRAR_EN_PAUSA = True."""
 import io
 import os
 import tempfile
@@ -35,9 +36,15 @@ st.session_state.setdefault("producidos", {})
 st.session_state.setdefault("fondos_ia", {})
 st.session_state.setdefault("publicados", {})
 
-tab_plan, tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
-    ["🗓️ Planeación", "🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
-)
+MOSTRAR_EN_PAUSA = False
+ESTILOS = {"Recorrido por la portada (recomendado)": "recorrido", "Clásico (onda de sonido)": "clasico"}
+
+if MOSTRAR_EN_PAUSA:
+    tab_plan, tab_clips, tab_titulos, tab_carrusel, tab_capsula = st.tabs(
+        ["🗓️ Planeación", "🎬 Clips del episodio", "🔤 Títulos para el buscador", "⏸️ Carrusel (en pausa)", "⏸️ Cápsula voz IA (en pausa)"]
+    )
+else:
+    tab_plan, tab_clips, tab_titulos = st.tabs(["🗓️ Planeación", "🎬 Clips del episodio", "🔤 Títulos para el buscador"])
 
 # ─────────────────────────── Conexión con Instagram y TikTok ───────────────────────────
 # Regreso de «Conectar TikTok»: TikTok vuelve a esta página con ?code=…&state=…
@@ -138,17 +145,25 @@ def _cola_actual() -> dict:
     return st.session_state.cola_ig
 
 
-def _enviar_a_aprobacion(i: int, hecho: dict, agenda: dict, semana: dict, texto_ig: str, texto_tt: str, gancho: str):
+def _enviar_a_aprobacion(i: int, hecho: dict, agenda: dict, semana: dict, texto_ig: str, texto_tt: str, gancho: str,
+                        pregunta: str = ""):
     """Arma el clip: sube el video y sus textos a la cola como «por aprobar». No se publica nada
-    hasta que lo apruebes en Planeación → Aprobar la semana."""
+    hasta que lo apruebes en Planeación → Aprobar la semana. Si responde una idea del banco, la marca usada."""
     with st.spinner(f"Armando el clip {i + 1} (subiendo video y textos)…"):
         try:
+            duracion = hecho.get("duracion") or video.duracion_segundos(hecho["mp4"])
             cola.programar(semana["fecha"], agenda["clip"], agenda["pilar"], agenda["fecha"],
-                           hecho["mp4"], hecho.get("portada"), texto_ig, texto_tiktok=texto_tt, gancho=gancho)
+                           hecho["mp4"], hecho.get("portada"), texto_ig, texto_tiktok=texto_tt, gancho=gancho,
+                           duracion=duracion)
         except Exception as e:
             st.error(f"Clip {i + 1}: {e}")
             return False
     st.session_state.cola_ig = None
+    if pregunta:
+        plan, _ = _plan_de_clips()
+        for idea in plan.get("ideas", []):
+            if idea.get("idea", "").strip() == pregunta.strip():
+                idea["usada"] = True
     _guardar_estado_clip(i, "Por aprobar", gancho)
     return True
 
@@ -204,12 +219,28 @@ with tab_clips:
             "Número de clips", 1, 7, config.CLIPS_POR_SEMANA,
             help="Modelo vigente: 3 clips por semana, el mismo archivo en Instagram y TikTok.",
         )
-        fondo_subido = st.file_uploader("Imagen de fondo para todos (opcional)", type=["jpg", "jpeg", "png"])
-        con_subtitulos = st.checkbox("Subtítulos grandes (estilo Reels)", value=True)
-        movimiento = st.checkbox(
-            "Movimiento suave de la imagen", value=True,
-            help="La foto se desplaza muy despacio: retiene más que una imagen quieta.",
+        estilo_nombre = st.radio(
+            "Estilo del video", list(ESTILOS),
+            help="Recorrido: abre con la portada, la cámara recorre sus detalles con la pregunta arriba y cierra con "
+                 "«Episodio completo en mi perfil». Clásico: imagen o color de fondo con onda de sonido.",
         )
+        estilo = ESTILOS[estilo_nombre]
+        portada_subida = None
+        if estilo == "recorrido":
+            portada_subida = st.file_uploader(
+                "Portada del episodio (la cuadrada de Spotify)", type=["jpg", "jpeg", "png"],
+                help="La misma para los 3 clips. Si no la subes, se usa la imagen de cada clip.",
+            )
+            fondo_subido = None
+            movimiento = True
+        else:
+            fondo_subido = st.file_uploader("Imagen de fondo para todos (opcional)", type=["jpg", "jpeg", "png"])
+            movimiento = st.checkbox(
+                "Movimiento suave de la imagen", value=True,
+                help="La foto se desplaza muy despacio: retiene más que una imagen quieta.",
+            )
+        con_subtitulos = st.checkbox("Subtítulos grandes", value=estilo != "recorrido",
+                                     help="El estilo Recorrido va sin subtítulos, como el ejemplo; actívalos si quieres.")
 
     if st.button("🎬 Encontrar los mejores momentos", type="primary", disabled=audio_subido is None):
         carpeta = tempfile.mkdtemp(prefix="clips_")
@@ -228,9 +259,13 @@ with tab_clips:
             minutos = video.duracion_segundos(episodio) / 60
             st.write(f"⬆️ Enviando {minutos:.0f} minutos de audio a Gemini…")
             st.write("🔎 Escuchando el episodio completo y eligiendo los mejores momentos (30-90 segundos)…")
-            st.session_state.analisis = analizar_episodio(episodio, cantidad, contexto)
+            plan_ideas, _ = _plan_de_clips()
+            preguntas = [d["idea"] for d in plan_ideas.get("ideas", []) if not d.get("usada") and d.get("idea")][:15]
+            if preguntas:
+                st.write(f"💬 Buscando también respuestas a {len(preguntas)} preguntas reales del banco de Ideas…")
+            st.session_state.analisis = analizar_episodio(episodio, cantidad, contexto, preguntas)
             estado.update(label=f"{len(st.session_state.analisis.clips)} momentos encontrados", state="complete", expanded=False)
-        st.session_state.trabajo = {"carpeta": carpeta, "episodio": episodio, "fondo": fondo}
+        st.session_state.trabajo = {"carpeta": carpeta, "episodio": episodio, "fondo": fondo, "portada_ep": None}
         st.session_state.producidos = {}
         st.session_state.fondos_ia = {}
         st.session_state.publicados = {}
@@ -238,6 +273,13 @@ with tab_clips:
     analisis = st.session_state.analisis
     trabajo = st.session_state.trabajo
     if analisis and trabajo:
+        # Portada del episodio (estilo Recorrido): se guarda una vez y sirve para los 3 clips.
+        if portada_subida is not None:
+            ruta_p = os.path.join(trabajo["carpeta"], "portada_episodio" + os.path.splitext(portada_subida.name)[1].lower())
+            if trabajo.get("portada_ep") != ruta_p or not os.path.exists(ruta_p):
+                with open(ruta_p, "wb") as f:
+                    f.write(portada_subida.getbuffer())
+                trabajo["portada_ep"] = ruta_p
         # Imagen general cambiada después del análisis
         if fondo_subido and not trabajo.get("fondo"):
             trabajo["fondo"] = os.path.join(trabajo["carpeta"], "fondo" + os.path.splitext(fondo_subido.name)[1].lower())
@@ -281,6 +323,7 @@ with tab_clips:
                     st.session_state.producidos[i] = producir_clip(
                         trabajo["episodio"], a_segundos(clip.inicio), a_segundos(clip.fin), clip.gancho,
                         trabajo["carpeta"], f"clip_{i + 1}", _fondo_de(i), con_subtitulos, movimiento=movimiento,
+                        estilo=estilo, portada_episodio=trabajo.get("portada_ep"),
                     )
                 except Exception as e:
                     st.session_state.producidos[i] = {"error": str(e)}
@@ -318,6 +361,8 @@ with tab_clips:
                 else:
                     st.caption("Clip extra: no tiene día en el calendario de la semana.")
                 st.caption(f"Por qué funciona: {clip.por_que_funciona}")
+                if getattr(clip, "pregunta_publico", ""):
+                    st.caption(f"💬 Responde a una pregunta real del público: «{clip.pregunta_publico}»")
 
                 # ── ✂️ Editar el clip ──
                 st.markdown("**✂️ Editar el clip**")
@@ -386,7 +431,7 @@ with tab_clips:
                                 trabajo["episodio"], t_ini, t_fin, gancho,
                                 trabajo["carpeta"], f"clip_{i + 1}", _fondo_de(i), con_subtitulos,
                                 ajuste="llenar" if ajuste == "Llenar la pantalla" else "completa",
-                                movimiento=movimiento,
+                                movimiento=movimiento, estilo=estilo, portada_episodio=trabajo.get("portada_ep"),
                             )
                         except Exception as e:
                             st.session_state.producidos[i] = {"error": str(e)}
@@ -409,6 +454,10 @@ with tab_clips:
                         texto_ig = st.text_area("Texto para Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
                         texto_tt = st.text_area("Texto para TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
 
+                        # ── ✔️ Revisión automática ──
+                        for ok, regla in plan_mod.revision_clip(gancho, texto_ig, texto_tt, hecho.get("duracion", 0)):
+                            st.caption(("✅ " if ok else "⚠️ ") + regla)
+
                         # ── 📦 Enviar a aprobación ──
                         if agenda and semana_clips:
                             st.markdown("**📦 Aprobación**")
@@ -427,7 +476,8 @@ with tab_clips:
                             elif estado_cola == "por_aprobar":
                                 st.info(f"🟡 Armado, esperando tu aprobación en Planeación → Aprobar la semana. Saldría el {cuando}.")
                                 if st.button("🔁 Reemplazar con esta versión", key=f"rearmar_{i}"):
-                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho):
+                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho,
+                                                            getattr(clip, "pregunta_publico", "")):
                                         st.rerun()
                             else:
                                 if estado_cola == "error":
@@ -435,7 +485,8 @@ with tab_clips:
                                 if st.button(f"📦 Enviar a aprobación ({cuando})", key=f"cola_{i}", type="primary",
                                              disabled=not hist.puede_guardar(),
                                              help=None if hist.puede_guardar() else "Falta GITHUB_TOKEN en los Secrets."):
-                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho):
+                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho,
+                                                            getattr(clip, "pregunta_publico", "")):
                                         st.rerun()
 
                         # ── 🚀 Publicar ya (fuera del horario) ──
@@ -491,6 +542,7 @@ with tab_clips:
                     i, d, calendario_clips[i], semana_clips,
                     st.session_state.get(f"ig_{i}", t["instagram"]), st.session_state.get(f"tt_{i}", t["tiktok"]),
                     st.session_state.get(f"gan_{i}", analisis.clips[i].gancho),
+                    getattr(analisis.clips[i], "pregunta_publico", ""),
                 ))
             if all(hechos):
                 st.rerun()
@@ -525,92 +577,94 @@ with tab_titulos:
         st.dataframe(pd.DataFrame({"Antes": lista, "Después": (nuevos + [""] * len(lista))[: len(lista)]}), width="stretch")
 
 # ─────────────────────────── Carrusel ───────────────────────────
-with tab_carrusel:
-    st.info("En pausa en el modelo vigente: no se publica carrusel cada semana. Úsalo solo si tú lo decides.")
-    st.subheader("Carrusel de Instagram para Canva")
-    tema_carrusel = st.text_input("Tema del carrusel", placeholder="Ej.: 5 cosas que dice la Iglesia sobre la FIV")
-    n_diap = st.slider("Diapositivas", 5, 10, 7)
-    if st.button("🎨 Crear carrusel", disabled=not tema_carrusel.strip()):
-        with st.spinner("Diseñando el carrusel…"):
-            st.session_state.carrusel = crear_carrusel(tema_carrusel, n_diap)
-            st.session_state.carrusel_imgs = None
-    car = st.session_state.get("carrusel")
-    if car:
-        df = pd.DataFrame([{"Titulo": d.titulo, "Texto": d.texto} for d in car.diapositivas])
-        st.dataframe(df, width="stretch")
-        st.download_button("⬇️ CSV para Canva (Bulk Create)", df.to_csv(index=False).encode("utf-8"), "carrusel.csv", "text/csv")
-        st.text_area("Caption", value=car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags)), height=180)
+if MOSTRAR_EN_PAUSA:
+    with tab_carrusel:
+        st.info("En pausa en el modelo vigente: no se publica carrusel cada semana. Úsalo solo si tú lo decides.")
+        st.subheader("Carrusel de Instagram para Canva")
+        tema_carrusel = st.text_input("Tema del carrusel", placeholder="Ej.: 5 cosas que dice la Iglesia sobre la FIV")
+        n_diap = st.slider("Diapositivas", 5, 10, 7)
+        if st.button("🎨 Crear carrusel", disabled=not tema_carrusel.strip()):
+            with st.spinner("Diseñando el carrusel…"):
+                st.session_state.carrusel = crear_carrusel(tema_carrusel, n_diap)
+                st.session_state.carrusel_imgs = None
+        car = st.session_state.get("carrusel")
+        if car:
+            df = pd.DataFrame([{"Titulo": d.titulo, "Texto": d.texto} for d in car.diapositivas])
+            st.dataframe(df, width="stretch")
+            st.download_button("⬇️ CSV para Canva (Bulk Create)", df.to_csv(index=False).encode("utf-8"), "carrusel.csv", "text/csv")
+            st.text_area("Caption", value=car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags)), height=180)
 
-        st.markdown("#### 🖼️ Imágenes listas para Instagram")
-        k1, k2 = st.columns(2)
-        foto_car = k1.file_uploader("Foto de fondo para el carrusel (opcional)", type=["jpg", "jpeg", "png"], key="foto_carrusel")
-        with k2:
-            idea_car = st.text_input("O pide la foto a la IA", value=tema_carrusel, key="idea_carrusel")
-            if st.button("🎨 Crear foto de fondo con IA", key="ia_carrusel"):
-                with st.spinner("Pintando la foto…"):
-                    try:
-                        st.session_state.foto_car_ia = generar_imagen(
-                            idea_car, os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo_ia.jpg"), "4:5"
-                        )
-                    except Exception as e:
-                        st.error(str(e))
-            if st.session_state.get("foto_car_ia") and foto_car is None:
-                st.image(st.session_state.foto_car_ia, width=120, caption="Foto de la IA")
-        if st.button("🖼️ Crear imágenes del carrusel", type="primary"):
-            ruta_foto = st.session_state.get("foto_car_ia")
-            if foto_car is not None:
-                ruta_foto = os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo" + os.path.splitext(foto_car.name)[1].lower())
-                with open(ruta_foto, "wb") as f:
-                    f.write(foto_car.getbuffer())
-            with st.spinner("Dibujando las diapositivas…"):
-                st.session_state.carrusel_imgs = crear_imagenes(car.diapositivas, ruta_foto)
-        imgs = st.session_state.get("carrusel_imgs")
-        if imgs:
-            columnas = st.columns(4)
-            for n, datos in enumerate(imgs):
-                columnas[n % 4].image(datos, caption=f"{n + 1}/{len(imgs)}")
-            texto_caption = car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags))
-            st.download_button(
-                "⬇️ Descargar imágenes (.zip)", zip_imagenes(imgs, texto_caption),
-                file_name="carrusel.zip", mime="application/zip", type="primary",
-            )
-            st.caption("Formato 1080×1350 (4:5). En Instagram súbelas en orden como una sola publicación y pega el caption.")
+            st.markdown("#### 🖼️ Imágenes listas para Instagram")
+            k1, k2 = st.columns(2)
+            foto_car = k1.file_uploader("Foto de fondo para el carrusel (opcional)", type=["jpg", "jpeg", "png"], key="foto_carrusel")
+            with k2:
+                idea_car = st.text_input("O pide la foto a la IA", value=tema_carrusel, key="idea_carrusel")
+                if st.button("🎨 Crear foto de fondo con IA", key="ia_carrusel"):
+                    with st.spinner("Pintando la foto…"):
+                        try:
+                            st.session_state.foto_car_ia = generar_imagen(
+                                idea_car, os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo_ia.jpg"), "4:5"
+                            )
+                        except Exception as e:
+                            st.error(str(e))
+                if st.session_state.get("foto_car_ia") and foto_car is None:
+                    st.image(st.session_state.foto_car_ia, width=120, caption="Foto de la IA")
+            if st.button("🖼️ Crear imágenes del carrusel", type="primary"):
+                ruta_foto = st.session_state.get("foto_car_ia")
+                if foto_car is not None:
+                    ruta_foto = os.path.join(tempfile.mkdtemp(prefix="carrusel_"), "fondo" + os.path.splitext(foto_car.name)[1].lower())
+                    with open(ruta_foto, "wb") as f:
+                        f.write(foto_car.getbuffer())
+                with st.spinner("Dibujando las diapositivas…"):
+                    st.session_state.carrusel_imgs = crear_imagenes(car.diapositivas, ruta_foto)
+            imgs = st.session_state.get("carrusel_imgs")
+            if imgs:
+                columnas = st.columns(4)
+                for n, datos in enumerate(imgs):
+                    columnas[n % 4].image(datos, caption=f"{n + 1}/{len(imgs)}")
+                texto_caption = car.caption + "\n\n" + " ".join(hashtags_instagram_finales(car.hashtags))
+                st.download_button(
+                    "⬇️ Descargar imágenes (.zip)", zip_imagenes(imgs, texto_caption),
+                    file_name="carrusel.zip", mime="application/zip", type="primary",
+                )
+                st.caption("Formato 1080×1350 (4:5). En Instagram súbelas en orden como una sola publicación y pega el caption.")
 
 # ─────────────────────────── Cápsula con voz IA ───────────────────────────
-with tab_capsula:
-    st.info("En pausa en el modelo vigente: el episodio se graba con tu voz. Úsalo solo si tú lo decides.")
-    st.subheader("Cápsula de 60 segundos sin grabar")
-    st.caption("Convierte un guion o una idea en un video vertical con voz IA y subtítulos.")
-    base = st.text_area("Guion o idea", height=150)
-    gancho_capsula = st.text_input("Gancho en pantalla", placeholder="¿La FIV es pecado?")
-    if st.button("🗣️ Crear cápsula", disabled=not base.strip()):
-        with st.status("Creando la cápsula…", expanded=True) as estado:
-            st.write("✍️ Escribiendo el guion de 60 segundos…")
-            guion60 = llm.texto(
-                "Resume en un guion hablado de 60 segundos (máximo 150 palabras): gancho en la primera frase, "
-                "una idea central fiel a la doctrina católica dicha con ternura, y cierre «Escucha el episodio "
-                f"completo en Spotify, enlace en la bio». Solo el texto que se lee.\n\n{base}",
-                temperatura=0.6,
-            )
-            st.write("🗣️ Locutando con voz IA…")
-            carpeta = tempfile.mkdtemp(prefix="capsula_")
-            voz = generar_audio(guion60, os.path.join(carpeta, "voz.mp3"))
-            if not voz["success"]:
-                st.error(voz["error"])
-            else:
-                st.write("🎞️ Subtitulando y armando el video…")
-                try:
-                    hecho = producir_clip(
-                        voz["ruta"], 0, video.duracion_segundos(voz["ruta"]),
-                        gancho_capsula or "Lo que nadie te contó", carpeta, "capsula",
-                    )
-                    st.session_state.capsula = {"guion": guion60, **hecho}
-                    estado.update(label="Cápsula lista", state="complete", expanded=False)
-                except Exception as e:
-                    st.error(str(e))
-    cap = st.session_state.get("capsula")
-    if cap:
-        st.text_area("Guion leído", value=cap["guion"], height=150)
-        st.video(cap["mp4"])
-        with open(cap["mp4"], "rb") as f:
-            st.download_button("⬇️ Video MP4", f.read(), file_name="capsula.mp4")
+if MOSTRAR_EN_PAUSA:
+    with tab_capsula:
+        st.info("En pausa en el modelo vigente: el episodio se graba con tu voz. Úsalo solo si tú lo decides.")
+        st.subheader("Cápsula de 60 segundos sin grabar")
+        st.caption("Convierte un guion o una idea en un video vertical con voz IA y subtítulos.")
+        base = st.text_area("Guion o idea", height=150)
+        gancho_capsula = st.text_input("Gancho en pantalla", placeholder="¿La FIV es pecado?")
+        if st.button("🗣️ Crear cápsula", disabled=not base.strip()):
+            with st.status("Creando la cápsula…", expanded=True) as estado:
+                st.write("✍️ Escribiendo el guion de 60 segundos…")
+                guion60 = llm.texto(
+                    "Resume en un guion hablado de 60 segundos (máximo 150 palabras): gancho en la primera frase, "
+                    "una idea central fiel a la doctrina católica dicha con ternura, y cierre «Escucha el episodio "
+                    f"completo en Spotify, enlace en la bio». Solo el texto que se lee.\n\n{base}",
+                    temperatura=0.6,
+                )
+                st.write("🗣️ Locutando con voz IA…")
+                carpeta = tempfile.mkdtemp(prefix="capsula_")
+                voz = generar_audio(guion60, os.path.join(carpeta, "voz.mp3"))
+                if not voz["success"]:
+                    st.error(voz["error"])
+                else:
+                    st.write("🎞️ Subtitulando y armando el video…")
+                    try:
+                        hecho = producir_clip(
+                            voz["ruta"], 0, video.duracion_segundos(voz["ruta"]),
+                            gancho_capsula or "Lo que nadie te contó", carpeta, "capsula",
+                        )
+                        st.session_state.capsula = {"guion": guion60, **hecho}
+                        estado.update(label="Cápsula lista", state="complete", expanded=False)
+                    except Exception as e:
+                        st.error(str(e))
+        cap = st.session_state.get("capsula")
+        if cap:
+            st.text_area("Guion leído", value=cap["guion"], height=150)
+            st.video(cap["mp4"])
+            with open(cap["mp4"], "rb") as f:
+                st.download_button("⬇️ Video MP4", f.read(), file_name="capsula.mp4")

@@ -113,7 +113,7 @@ def identificador(semana_fecha: str, clip: int) -> str:
 
 def programar(semana_fecha: str, clip: int, pilar: str, fecha_iso: str, mp4: str,
               portada: Optional[str], texto: str, ahora: Optional[datetime] = None,
-              texto_tiktok: str = "", gancho: str = "", aprobado: bool = False) -> dict:
+              texto_tiktok: str = "", gancho: str = "", aprobado: bool = False, duracion: float = 0) -> dict:
     """Deja un Reel en la cola. Por defecto queda «por_aprobar» (armado, esperando la aprobación).
     Si el clip ya estaba en la cola sin publicar, lo reemplaza; nunca repite uno publicado."""
     if ya_paso(fecha_iso, ahora):
@@ -130,7 +130,7 @@ def programar(semana_fecha: str, clip: int, pilar: str, fecha_iso: str, mp4: str
     nuevo = {
         "id": cid, "semana": semana_fecha, "clip": clip, "pilar": pilar,
         "publicar_en": momento_de_publicar(fecha_iso).isoformat(), "video": video, "portada": foto,
-        "texto": texto, "texto_tiktok": texto_tiktok, "gancho": gancho, "fecha": fecha_iso,
+        "texto": texto, "texto_tiktok": texto_tiktok, "gancho": gancho, "fecha": fecha_iso, "duracion": round(duracion, 1),
         "estado": "pendiente" if aprobado else "por_aprobar", "intentos": 0, "enlace": "", "error": "",
     }
     datos["clips"] = [c for c in datos["clips"] if c["id"] != cid] + [nuevo]

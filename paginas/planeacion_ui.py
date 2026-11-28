@@ -112,6 +112,10 @@ def _panel_aprobacion(plan: dict):
                 if item.get("gancho"):
                     st.markdown(f"Gancho: «{item['gancho']}»")
                 if estado == "por_aprobar":
+                    for ok, regla in plan_mod.revision_clip(item.get("gancho", ""), item.get("texto", ""),
+                                                            item.get("texto_tiktok", ""), item.get("duracion", 0)):
+                        st.caption(("✅ " if ok else "⚠️ ") + regla)
+                if estado == "por_aprobar":
                     por_aprobar += 1
                     textos[cid] = st.text_area("Texto de Instagram", value=item.get("texto", ""), height=160, key=f"apr_ig_{cid}")
                 elif estado != "publicado":
@@ -127,6 +131,7 @@ def _panel_aprobacion(plan: dict):
                     st.link_button("⬇️ Video para TikTok", item["video"]["url"], key=f"apr_dl_{cid}")
                 st.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"apr_tt_{cid}")
                 clave_tt = f"apr_ttok_{cid}"
+                st.caption("Al subirlo a TikTok, marca la etiqueta de contenido generado con IA.")
                 st.checkbox("Ya lo programé en TikTok Studio", value=c["tiktok"], key=clave_tt,
                             on_change=_marcar_tiktok, args=(semana["fecha"], i, clave_tt))
                 if estado in ("por_aprobar", "pendiente", "error") and st.button("↩️ Devolver (rehacer en Clips)", key=f"apr_dev_{cid}"):

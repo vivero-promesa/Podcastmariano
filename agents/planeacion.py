@@ -389,3 +389,24 @@ def cumplimiento(plan: dict, cola_clips: List[dict], ahora: Optional[datetime] =
     ig = sum(1 for f in ultimas for c in f["clips"] if c["a_tiempo"])
     tt = sum(1 for f in ultimas for c in f["clips"] if c["tiktok"].startswith("✅"))
     return {"filas": filas, "semanas": len(ultimas), "total": total, "instagram": ig, "tiktok": tt}
+
+
+# ─────────────────────────── Revisión automática del clip ───────────────────────────
+LLAMADO = "Episodio completo en mi perfil"
+
+
+def revision_clip(gancho: str, texto_ig: str, texto_tt: str, duracion: float = 0) -> List[tuple]:
+    """Las reglas del 24 nov 2026, comprobadas solas: [(cumple, regla), …]."""
+    g = (gancho or "").strip()
+    cuerpo_ig = (texto_ig or "").split("🎧")[0]
+    cuerpo_tt = (texto_tt or "").split("🎧")[0]
+    reglas = [
+        (g.startswith("¿") and g.endswith("?") and len(g.split()) <= 9,
+         "Pregunta directa en pantalla desde el segundo 0 (¿…?, máx. 8-9 palabras)"),
+        ("?" in cuerpo_ig, "Instagram cierra con una pregunta al público"),
+        ("?" in cuerpo_tt, "TikTok cierra con una pregunta al público"),
+        (LLAMADO in (texto_ig or "") and LLAMADO in (texto_tt or ""), f"«{LLAMADO}» en los dos textos"),
+    ]
+    if duracion:
+        reglas.insert(1, (30 <= duracion <= 92, f"Duración entre 30 y 90 s (tiene {duracion:.0f} s)"))
+    return reglas

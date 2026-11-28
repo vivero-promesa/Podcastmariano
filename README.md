@@ -125,6 +125,8 @@ python main.py
 
 ## Instagram automático
 
+**Estilo de los clips:** por defecto «Recorrido por la portada» — abre con la portada cuadrada del episodio y la pregunta, la cámara recorre sus detalles con la pregunta fija arriba y cierra con «Episodio completo en mi perfil». Se sube la portada una vez en 🎬 Clips. El estilo «Clásico» (onda de sonido) sigue disponible. Cada clip muestra una revisión automática (pregunta, duración, pregunta al público, llamado al perfil) y la búsqueda de momentos usa las preguntas sin usar del banco de Ideas.
+
 **Un solo hilo con aprobación:** en 🎬 Clips, **📦 Enviar a aprobación** sube el video y sus textos a la cola como «por aprobar» (GitHub Actions nunca publica algo sin aprobar). En 🗓️ Planeación, el panel **✅ Aprobar la semana** muestra los 3 videos con sus textos de Instagram (editables) y TikTok; al aprobar, GitHub Actions los publica a su hora aunque la app esté dormida y el calendario se marca solo. La pestaña **🚦 ¿Se cumple?** compara el calendario con lo que de verdad salió. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
 
 La tarea corre viernes, lunes y miércoles desde las 7:05 p. m. y reintenta durante la noche. Si algo falla, GitHub avisa por correo y la app muestra el error. TikTok no permite este automático para apps propias: los clips se programan el jueves en TikTok Studio.
