@@ -159,6 +159,15 @@ def aprobar(textos: dict, ahora: Optional[datetime] = None) -> Tuple[list, list]
     return aprobados, fuera
 
 
+def marcar_publicado(cid: str, enlace: str = ""):
+    """Anota que el clip ya salió (publicado con 🚀 desde el panel), para que el agente no lo repita."""
+    datos, sha = leer()
+    for c in datos.get("clips", []):
+        if c["id"] == cid:
+            c.update(estado="publicado", enlace=enlace, error="")
+    escribir(datos, sha, f"Cola de Instagram: {cid} publicado a mano")
+
+
 def cancelar(cid: str):
     datos, sha = leer()
     item = next((c for c in datos["clips"] if c["id"] == cid), None)
