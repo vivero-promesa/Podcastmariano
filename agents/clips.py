@@ -135,6 +135,8 @@ def producir_clip(
     movimiento: bool = True,
     estilo: str = "recorrido",
     portada_episodio: str = None,
+    look: str = "Suave",
+    semilla: int = 0,
 ) -> dict:
     """estilo «recorrido»: portada del episodio → recorrido de cámara por sus detalles → cierre con
     «Episodio completo en mi perfil» (el estilo elegido por Elena). Usa la portada del episodio o, si no
@@ -155,7 +157,7 @@ def producir_clip(
             usar_srt, usar_ass = srt, ass
     imagen_recorrido = portada_episodio or fondo
     if estilo == "recorrido" and imagen_recorrido:
-        video.hacer_video_recorrido(audio, usar_ass, gancho, mp4, imagen_recorrido)
+        video.hacer_video_recorrido(audio, usar_ass, gancho, mp4, imagen_recorrido, look=look, semilla=semilla)
     else:
         video.hacer_video_vertical(audio, usar_ass, gancho, mp4, fondo=fondo, ajuste=ajuste, movimiento=movimiento)
     try:

@@ -131,7 +131,8 @@ def _panel_aprobacion(plan: dict):
                     st.link_button("⬇️ Video para TikTok", item["video"]["url"], key=f"apr_dl_{cid}")
                 st.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"apr_tt_{cid}")
                 clave_tt = f"apr_ttok_{cid}"
-                st.caption("Al subirlo a TikTok, marca la etiqueta de contenido generado con IA.")
+                st.caption("Al subirlo: marca la etiqueta de contenido generado con IA y agrega un sonido en tendencia "
+                           "de la biblioteca de TikTok a volumen muy bajo (5-10 %), debajo de tu voz.")
                 st.checkbox("Ya lo programé en TikTok Studio", value=c["tiktok"], key=clave_tt,
                             on_change=_marcar_tiktok, args=(semana["fecha"], i, clave_tt))
                 if estado in ("por_aprobar", "pendiente", "error") and st.button("↩️ Devolver (rehacer en Clips)", key=f"apr_dev_{cid}"):
