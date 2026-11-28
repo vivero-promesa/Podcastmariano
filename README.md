@@ -32,7 +32,7 @@ Cada tarea se hace en un solo lugar. Los enfoques, la investigación, el guion, 
 | Lunes | Documento(s), enfoque, investigación, guion, las dos aprobaciones y guardar en el historial | Estudio de producción |
 | Martes | Grabar con tu voz | Tu micrófono |
 | Miércoles | Clips y capítulos; eliges los 3 mejores | Estudio de Redes |
-| Jueves | Dejar los 3 clips listos para viernes, lunes y miércoles a las 7:00 p. m. | Instagram: botón 📅 de la app (sale solo). TikTok: TikTok Studio |
+| Jueves | Armar los 3 clips (🎬 Clips → 📦 Enviar a aprobación) y aprobarlos (🗓️ Planeación → ✅ Aprobar la semana) | Instagram sale solo viernes, lunes y miércoles a las 7:00 p. m. TikTok: TikTok Studio desde el mismo panel |
 | Viernes | Publicar en Spotify (6:00 a. m.) y poner el enlace del episodio en las bios | Spotify for Creators, Instagram, TikTok |
 | Fin de semana | Responder comentarios | Instagram, TikTok, Spotify |
 
@@ -125,7 +125,7 @@ python main.py
 
 ## Instagram automático
 
-El botón 📅 **Programar en Instagram** guarda el clip en una cola y GitHub Actions lo publica a su hora, aunque la app esté dormida. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
+**Un solo hilo con aprobación:** en 🎬 Clips, **📦 Enviar a aprobación** sube el video y sus textos a la cola como «por aprobar» (GitHub Actions nunca publica algo sin aprobar). En 🗓️ Planeación, el panel **✅ Aprobar la semana** muestra los 3 videos con sus textos de Instagram (editables) y TikTok; al aprobar, GitHub Actions los publica a su hora aunque la app esté dormida y el calendario se marca solo. La pestaña **🚦 ¿Se cumple?** compara el calendario con lo que de verdad salió. La primera vez agrega estos dos secretos en GitHub → Settings → Secrets and variables → Actions, con los mismos valores de Streamlit: `INSTAGRAM_TOKEN` e `INSTAGRAM_USER_ID`.
 
 La tarea corre viernes, lunes y miércoles desde las 7:05 p. m. y reintenta durante la noche. Si algo falla, GitHub avisa por correo y la app muestra el error. TikTok no permite este automático para apps propias: los clips se programan el jueves en TikTok Studio.
 

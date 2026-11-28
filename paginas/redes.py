@@ -10,6 +10,7 @@ import streamlit as st
 
 import config
 from agents import cola, llm, video
+from agents import historial as hist
 from agents import publicar_redes as pub
 from agents.carrusel import crear_carrusel
 from agents.carrusel_imagenes import crear_imagenes, zip_imagenes
@@ -102,19 +103,24 @@ def _panel_conexiones():
 
 
 def _plan_de_clips():
-    """El plan y la semana a la que pertenecen estos clips (la próxima del calendario)."""
+    """El plan y la semana a la que pertenecen estos clips: la elegida arriba de los clips o,
+    por defecto, la primera cuyo clip 1 todavía no ha salido."""
     if st.session_state.get("plan") is None:
         st.session_state.plan = plan_mod.cargar()
     plan = st.session_state.plan
-    return plan, plan_mod.semana_actual(plan)
+    elegida = st.session_state.get("semana_de_clips")
+    semana = next((s for s in plan.get("semanas", []) if s.get("fecha") == elegida), None)
+    return plan, semana or plan_mod.semana_para_clips(plan)
 
 
-def _guardar_estado_clip(i: int, estado: str):
-    """Guarda el estado del clip en el calendario. Sin semana o sin pilar no hace nada."""
+def _guardar_estado_clip(i: int, estado: str, gancho: str = None):
+    """Guarda el estado del clip (y su gancho real) en el calendario. Sin semana o sin pilar no hace nada."""
     plan, semana = _plan_de_clips()
     if not semana or i >= len(plan_mod.PILARES):
         return
     plan_mod.marcar_clip(semana, i, estado)
+    if gancho is not None:
+        plan_mod.guardar_gancho(semana, i, gancho)
     try:
         plan_mod.guardar(plan, f"Planeación: clip {i + 1} {estado.lower()} ({semana['fecha']})")
     except Exception as e:
@@ -132,16 +138,18 @@ def _cola_actual() -> dict:
     return st.session_state.cola_ig
 
 
-def _programar_instagram(i: int, hecho: dict, agenda: dict, semana: dict, texto: str):
-    with st.spinner(f"Dejando listo el clip {i + 1}…"):
+def _enviar_a_aprobacion(i: int, hecho: dict, agenda: dict, semana: dict, texto_ig: str, texto_tt: str, gancho: str):
+    """Arma el clip: sube el video y sus textos a la cola como «por aprobar». No se publica nada
+    hasta que lo apruebes en Planeación → Aprobar la semana."""
+    with st.spinner(f"Armando el clip {i + 1} (subiendo video y textos)…"):
         try:
             cola.programar(semana["fecha"], agenda["clip"], agenda["pilar"], agenda["fecha"],
-                           hecho["mp4"], hecho.get("portada"), texto)
+                           hecho["mp4"], hecho.get("portada"), texto_ig, texto_tiktok=texto_tt, gancho=gancho)
         except Exception as e:
             st.error(f"Clip {i + 1}: {e}")
             return False
     st.session_state.cola_ig = None
-    _guardar_estado_clip(i, "Programado")
+    _guardar_estado_clip(i, "Por aprobar", gancho)
     return True
 
 
@@ -278,12 +286,23 @@ with tab_clips:
                     st.session_state.producidos[i] = {"error": str(e)}
             barra.progress(1.0, text="Videos listos")
 
+        plan_clips, semana_defecto = _plan_de_clips()
+        fechas_plan = [s["fecha"] for s in plan_clips.get("semanas", []) if s.get("fecha")]
+        if fechas_plan:
+            defecto = fechas_plan.index(semana_defecto["fecha"]) if semana_defecto in plan_clips["semanas"] else 0
+            st.selectbox(
+                "¿De qué semana son estos clips?", fechas_plan, index=defecto, key="semana_de_clips",
+                format_func=lambda f: f"Viernes {planeacion_ui._fecha_bonita(f)}",
+                help="Por defecto, la próxima semana cuyo clip 1 todavía no ha salido.",
+            )
         _, semana_clips = _plan_de_clips()
         calendario_clips = plan_mod.clips_de_semana(semana_clips) if semana_clips else []
         if semana_clips:
             st.info(
-                f"Estos clips son de la semana del viernes {planeacion_ui._fecha_bonita(semana_clips['fecha'])}. "
-                f"Instagram: 📅 lo deja listo y sale solo a su hora. TikTok: prográmalo en TikTok Studio. El botón 🚀 publica en este momento."
+                f"**Un solo hilo:** 1) crea los videos · 2) 📦 envíalos a aprobación · "
+                f"3) apruébalos en **Planeación → Aprobar la semana** (ahí también tienes los textos de TikTok). "
+                f"Aprobados, salen solos en Instagram el {', '.join(c['dia'].lower() for c in calendario_clips)} a las {plan_mod.HORA_CLIPS} "
+                f"Semana del viernes {planeacion_ui._fecha_bonita(semana_clips['fecha'])}."
             )
 
         for i, clip in enumerate(analisis.clips):
@@ -390,96 +409,89 @@ with tab_clips:
                         texto_ig = st.text_area("Texto para Instagram (Reel)", value=textos["instagram"], height=170, key=f"ig_{i}")
                         texto_tt = st.text_area("Texto para TikTok", value=textos["tiktok"], height=100, key=f"tt_{i}")
 
-                        # ── 📅 Programar ──
+                        # ── 📦 Enviar a aprobación ──
                         if agenda and semana_clips:
-                            st.markdown("**📅 Programar**")
+                            st.markdown("**📦 Aprobación**")
                             cid = cola.identificador(semana_clips["fecha"], agenda["clip"])
                             en_cola = _cola_actual().get(cid)
                             cuando = f"{agenda['dia']} {planeacion_ui._fecha_bonita(agenda['fecha'])}, {agenda['hora']}"
-                            if en_cola and en_cola["estado"] == "publicado":
+                            estado_cola = (en_cola or {}).get("estado")
+                            if estado_cola == "publicado":
                                 st.success(f"Instagram: publicado → {en_cola['enlace']}")
-                            elif en_cola and en_cola["estado"] == "publicando":
+                            elif estado_cola == "publicando":
                                 st.warning("Instagram: se está publicando. Si no sale en un rato, revisa la cuenta antes de repetirlo.")
-                            elif en_cola and en_cola["estado"] == "pendiente":
-                                st.success(f"Instagram: listo, sale solo. {cuando}")
+                            elif estado_cola == "pendiente":
+                                st.success(f"Aprobado: sale solo en Instagram el {cuando}.")
                                 if en_cola.get("error"):
                                     st.warning(f"El último intento falló y se reintentará: {en_cola['error']}")
-                                if st.button("Cancelar en Instagram", key=f"cancelar_{i}"):
-                                    try:
-                                        cola.cancelar(cid)
-                                        st.session_state.cola_ig = None
-                                        _guardar_estado_clip(i, "Por hacer")
+                            elif estado_cola == "por_aprobar":
+                                st.info(f"🟡 Armado, esperando tu aprobación en Planeación → Aprobar la semana. Saldría el {cuando}.")
+                                if st.button("🔁 Reemplazar con esta versión", key=f"rearmar_{i}"):
+                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho):
                                         st.rerun()
-                                    except Exception as e:
-                                        st.error(str(e))
                             else:
-                                if en_cola and en_cola["estado"] == "error":
+                                if estado_cola == "error":
                                     st.error(f"Instagram no pudo publicarlo: {en_cola['error']}")
-                                if st.button(f"📅 Programar en Instagram ({cuando})", key=f"cola_{i}", type="primary",
-                                             disabled=not pub.instagram_configurado()):
-                                    if _programar_instagram(i, hecho, agenda, semana_clips, texto_ig):
+                                if st.button(f"📦 Enviar a aprobación ({cuando})", key=f"cola_{i}", type="primary",
+                                             disabled=not hist.puede_guardar(),
+                                             help=None if hist.puede_guardar() else "Falta GITHUB_TOKEN en los Secrets."):
+                                    if _enviar_a_aprobacion(i, hecho, agenda, semana_clips, texto_ig, texto_tt, gancho):
                                         st.rerun()
-                            t1, t2 = st.columns(2)
-                            t1.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"studio_{i}")
-                            if not agenda["tiktok"] and t2.button("✅ Ya lo programé en TikTok", key=f"tt_listo_{i}"):
-                                _plan, _semana = _plan_de_clips()
-                                plan_mod.marcar_tiktok(_semana, i)
-                                try:
-                                    plan_mod.guardar(_plan, f"Planeación: clip {i + 1} programado en TikTok")
-                                except Exception as e:
-                                    st.warning(f"No pude guardarlo: {e}")
-                                st.rerun()
 
-                        # ── 🚀 Publicar ──
-                        st.markdown("**🚀 Publicar**")
+                        # ── 🚀 Publicar ya (fuera del horario) ──
+                        publicar_ya = st.expander("🚀 Publicar ya, sin esperar el horario (solo excepciones)")
                         hay_ig, hay_tt = pub.instagram_configurado(), pub.tiktok_configurado()
-                        p1, p2, p3 = st.columns(3)
-                        en_ig = p1.checkbox("Instagram", value=hay_ig, disabled=not hay_ig, key=f"pub_ig_{i}")
-                        en_tt = p2.checkbox("TikTok", value=hay_tt, disabled=not hay_tt, key=f"pub_tt_{i}")
-                        prueba = p3.checkbox(
-                            "Reel de prueba", value=False, disabled=not hay_ig, key=f"pub_prueba_{i}",
-                            help="Instagram lo muestra primero a quien aún no te sigue. Si tu cuenta no lo admite, sale como Reel normal.",
-                        )
-                        ya = st.session_state.publicados.get(i, {})
-                        repetir = True
-                        if ya.get("instagram") or ya.get("tiktok"):
-                            st.caption(
-                                "Ya publicado: "
-                                + (f"[Instagram]({ya['instagram']['enlace']}) " if ya.get("instagram") else "")
-                                + ("· TikTok" if ya.get("tiktok") else "")
+                        with publicar_ya:
+                            p1, p2, p3 = st.columns(3)
+                            en_ig = p1.checkbox("Instagram", value=hay_ig, disabled=not hay_ig, key=f"pub_ig_{i}")
+                            en_tt = p2.checkbox("TikTok", value=hay_tt, disabled=not hay_tt, key=f"pub_tt_{i}")
+                            prueba = p3.checkbox(
+                                "Reel de prueba", value=False, disabled=not hay_ig, key=f"pub_prueba_{i}",
+                                help="Instagram lo muestra primero a quien aún no te sigue. Si tu cuenta no lo admite, sale como Reel normal.",
                             )
-                            repetir = st.checkbox("Sí, quiero publicarlo otra vez", key=f"otra_{i}")
-                        if hay_ig or hay_tt:
-                            destinos = " y ".join(n for n, s in (("Instagram", en_ig), ("TikTok", en_tt)) if s) or "…"
-                            if st.button(f"🚀 Publicar en {destinos}", key=f"pub_{i}", type="primary",
-                                         disabled=not (en_ig or en_tt) or not repetir):
-                                _publicar(i, hecho, texto_ig, texto_tt, en_ig, en_tt, prueba)
-                        if not (hay_ig and hay_tt):
-                            st.caption(
-                                "Para publicar con un clic conecta las cuentas (🔌 arriba). Mientras tanto, manual: "
-                                "descarga el MP4 y súbelo con estos botones, pegando el texto."
-                            )
-                            m1, m2 = st.columns(2)
-                            if not hay_ig:
-                                m1.link_button("Abrir Instagram", "https://www.instagram.com/", key=f"m_ig_{i}")
-                            if not hay_tt:
-                                m2.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"m_tt_{i}")
+                            ya = st.session_state.publicados.get(i, {})
+                            repetir = True
+                            if ya.get("instagram") or ya.get("tiktok"):
+                                st.caption(
+                                    "Ya publicado: "
+                                    + (f"[Instagram]({ya['instagram']['enlace']}) " if ya.get("instagram") else "")
+                                    + ("· TikTok" if ya.get("tiktok") else "")
+                                )
+                                repetir = st.checkbox("Sí, quiero publicarlo otra vez", key=f"otra_{i}")
+                            if hay_ig or hay_tt:
+                                destinos = " y ".join(n for n, s in (("Instagram", en_ig), ("TikTok", en_tt)) if s) or "…"
+                                if st.button(f"🚀 Publicar en {destinos}", key=f"pub_{i}", type="primary",
+                                             disabled=not (en_ig or en_tt) or not repetir):
+                                    _publicar(i, hecho, texto_ig, texto_tt, en_ig, en_tt, prueba)
+                            if not (hay_ig and hay_tt):
+                                st.caption(
+                                    "Para publicar con un clic conecta las cuentas (🔌 arriba). Mientras tanto, manual: "
+                                    "descarga el MP4 y súbelo con estos botones, pegando el texto."
+                                )
+                                m1, m2 = st.columns(2)
+                                if not hay_ig:
+                                    m1.link_button("Abrir Instagram", "https://www.instagram.com/", key=f"m_ig_{i}")
+                                if not hay_tt:
+                                    m2.link_button("Abrir TikTok Studio", "https://www.tiktok.com/tiktokstudio/upload", key=f"m_tt_{i}")
                         st.caption(f"Enlace del episodio para la bio → {textos['enlace']}")
 
         listos = {i: d for i, d in st.session_state.producidos.items() if d and not d.get("error")}
-        por_programar = {
+        por_armar = {
             i: d for i, d in listos.items() if semana_clips and i < len(calendario_clips)
             and _cola_actual().get(cola.identificador(semana_clips["fecha"], calendario_clips[i]["clip"]), {}).get("estado")
-            not in ("pendiente", "publicando", "publicado")
+            not in ("por_aprobar", "pendiente", "publicando", "publicado")
         }
-        if por_programar and pub.instagram_configurado() and st.button(
-            f"📅 Programar en Instagram los {len(por_programar)} clips listos", type="primary"
+        if por_armar and hist.puede_guardar() and st.button(
+            f"📦 Armar la semana: enviar los {len(por_armar)} clips a aprobación", type="primary"
         ):
-            hechos = [
-                _programar_instagram(i, d, calendario_clips[i], semana_clips,
-                                     st.session_state.get(f"ig_{i}", textos_clip(analisis.clips[i], enlace_ep)["instagram"]))
-                for i, d in por_programar.items()
-            ]
+            hechos = []
+            for i, d in por_armar.items():
+                t = textos_clip(analisis.clips[i], enlace_ep)
+                hechos.append(_enviar_a_aprobacion(
+                    i, d, calendario_clips[i], semana_clips,
+                    st.session_state.get(f"ig_{i}", t["instagram"]), st.session_state.get(f"tt_{i}", t["tiktok"]),
+                    st.session_state.get(f"gan_{i}", analisis.clips[i].gancho),
+                ))
             if all(hechos):
                 st.rerun()
 
